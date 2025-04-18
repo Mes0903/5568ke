@@ -38,20 +38,25 @@ add_subdirectory(${THIRD_DIR})
 
 add_executable(${PROJECT_NAME})
 
-file(GLOB_RECURSE 5568ke_sources LIST_DIRECTORIES false "${PROJECT_SOURCE_DIR}/5568ke/src/*.cpp")
+file(GLOB_RECURSE 5568ke_core LIST_DIRECTORIES false "${PROJECT_SOURCE_DIR}/5568ke/Core/src/*.cpp")
+file(GLOB_RECURSE 5568ke_material LIST_DIRECTORIES false "${PROJECT_SOURCE_DIR}/5568ke/Material/src/*.cpp")
 target_sources(${PROJECT_NAME} PRIVATE
-  ${5568ke_sources}
+  ${5568ke_core}
+  ${5568ke_material}
 )
 
 target_include_directories(
   ${PROJECT_NAME}
   PRIVATE
-    ${PROJECT_SOURCE_DIR}/5568ke/include
+    ${PROJECT_SOURCE_DIR}/5568ke/core/include
+    ${PROJECT_SOURCE_DIR}/5568ke/Material/include
     ${THIRD_DIR}/imgui
     ${THIRD_DIR}/implot
     ${THIRD_DIR}/glfw/include
     ${THIRD_DIR}/glad/include
-    ${THIRD_DIR}/Eigen
+    ${THIRD_DIR}/glm
+    ${THIRD_DIR}/stb_image
+    ${THIRD_DIR}/assimp/include
     ${OPENGL_INCLUDE_DIRS}
 )
 
@@ -62,6 +67,7 @@ target_link_libraries(
     IMPLOT_LIB
     glfw
     glad
+    assimp
     ${OPENGL_LIBRARIES}
 )
 
