@@ -1,29 +1,42 @@
-// include/Model.h
 #pragma once
 
-#include <filesystem>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <string>
 #include <vector>
 
+#include "BoundingBox.hpp"
 #include "Mesh.hpp"
 #include "Shader.hpp"
-#include "Texture.hpp"
-
-struct aiNode;
-struct aiScene;
 
 class Model {
 public:
-	std::vector<Mesh> const& meshes() const;
-	std::vector<Texture> const& textures() const;
-	bool load(std::filesystem::path const& path);
+	Model() = default;
+	~Model();
 
-private:
-	void processNode(aiNode*, aiScene const*);
-	Mesh processMesh(struct aiMesh*, aiScene const*);
+	// Core model data
+	std::vector<Mesh> meshes;
+	std::vector<BoundingBox> boundingBoxes;
+	BoundingBox globalBoundingBox;
 
-	// data
-	std::vector<Mesh> meshes_;
-	std::vector<Texture> textures_;
-	std::filesystem::path directory_;
+	// Metadata
+	std::string name;
+	std::string filePath;
+
+	// Default transformation values (can be set per format)
+	float defaultScale = 1.0f;
+	glm::vec3 defaultRotation = glm::vec3(0.0f);
+	glm::vec3 defaultTranslation = glm::vec3(0.0f);
+
+	// Methods for drawing
+	void draw(Shader& shader, glm::mat4 const& modelMatrix) const;
+
+	// Calculate a centered and scaled matrix based on model's bounding box
+	glm::mat4 calculateCenteredTransform(float scale = 1.0f) const;
+
+	// Calculate a transform that places the model on the ground plane (y=0)
+	glm::mat4 calculateGroundedTransform(float scale = 1.0f) const;
+
+	// Cleanup resources
+	void cleanup();
 };

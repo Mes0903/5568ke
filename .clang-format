@@ -2,7 +2,6 @@
 Language: Cpp
 BasedOnStyle: LLVM
 AlwaysBreakTemplateDeclarations: Yes
-BreakBeforeBraces: Attach
 ColumnLimit: 160
 SpaceAfterTemplateKeyword: true
 Standard: c++20
@@ -11,7 +10,6 @@ IndentWidth: 2
 AccessModifierOffset: -2
 UseTab: Always
 AllowShortEnumsOnASingleLine: true
-AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: true
 AllowShortLambdasOnASingleLine: true
 AllowShortBlocksOnASingleLine: Always
@@ -30,3 +28,15 @@ IncludeCategories:
       Priority: 30
 PointerAlignment: Left
 QualifierAlignment: Right
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass:	false
+  AfterStruct: false
+  AfterControlStatement:	false
+  AfterEnum:	false
+  AfterFunction:	true
+  AfterObjCDeclaration:	false
+  AfterUnion:	false
+  BeforeCatch:	false
+  BeforeElse:	true
+  IndentBraces:	false

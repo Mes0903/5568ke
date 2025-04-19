@@ -1,0 +1,11 @@
+Model Information:
+* title:	Smol Ina - Ninomae Ina'nis, HoloMyth
+* source:	https://sketchfab.com/3d-models/smol-ina-ninomae-inanis-holomyth-72780aade23c4902a1220f447aca246c
+* author:	Seafoam (https://sketchfab.com/seafoam)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Smol Ina - Ninomae Ina'nis, HoloMyth" (https://sketchfab.com/3d-models/smol-ina-ninomae-inanis-holomyth-72780aade23c4902a1220f447aca246c) by Seafoam (https://sketchfab.com/seafoam) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

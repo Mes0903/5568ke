@@ -2,16 +2,18 @@
 
 #include <vector>
 
+#include "Primitive.hpp"
 #include "Vertex.hpp"
 
 class Mesh {
 public:
-	Mesh(std::vector<Vertex> const& v, std::vector<uint32_t> const& i);
-	void draw() const;
-	void bind() const;
-	unsigned indexCount() const;
+	std::vector<Vertex> vertices;
+	std::vector<unsigned> indices;
+	std::vector<Primitive> primitives;
+
+	void setup();
+	void draw(Shader& shader) const;
 
 private:
 	unsigned vao_ = 0, vbo_ = 0, ebo_ = 0;
-	unsigned indexCount_ = 0;
 };

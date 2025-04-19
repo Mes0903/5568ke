@@ -1,4 +1,3 @@
-/* include/BlinnPhongMaterial.h */
 #pragma once
 
 #include "Material.hpp"
@@ -6,9 +5,10 @@
 
 class BlinnPhongMaterial : public Material {
 public:
-	BlinnPhongMaterial();
-	void bind(Camera const&, glm::mat4 const&, std::vector<Light> const&) const override;
+	glm::vec3 albedo{1.0f};
+	float shininess{32.0f};
+	Texture* diffuseMap = nullptr;
+	Texture* overlayMap = nullptr;
 
-private:
-	Shader shader_;
+	void bind(Shader& shader) const override;
 };

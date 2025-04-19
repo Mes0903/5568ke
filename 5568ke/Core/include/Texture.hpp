@@ -1,13 +1,20 @@
 #pragma once
 
+#include "include_5568ke.hpp"
+
 #include <string>
+
+enum class TextureType { Diffuse, Specular, Normal, Roughness };
 
 class Texture {
 public:
-	Texture() = default;
-	Texture(std::string const& file, bool srgb = true);
-	void bind(int unit = 0) const;
+	GLuint id = 0;
+	TextureType type;
+	std::string path;
 
-private:
-	unsigned id_ = 0;
+	void bind(unsigned slot) const
+	{
+		glActiveTexture(GL_TEXTURE0 + slot);
+		glBindTexture(GL_TEXTURE_2D, id);
+	}
 };

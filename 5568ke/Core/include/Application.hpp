@@ -1,32 +1,61 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
+#include "include_5568ke.hpp"
 
-#include "Camera.hpp"
+#include <array>
+#include <string>
+#include <unordered_map>
+
+#include "ImGuiManager.hpp"
+#include "ModelRegistry.hpp"
 #include "Renderer.hpp"
 #include "Scene.hpp"
 
-// -----------------------------------------------------------------
-// Application  — top‑level orchestrator (window, input, main loop)
-// -----------------------------------------------------------------
 class Application {
 public:
+	Application();
+	~Application();
+
 	int run();
 
 private:
-	void initWindow();
-	void initGL();
-	void loop();
-	void drawFrame();
-	void cleanup();
+	// Initialization methods
+	void initWindow_();
+	void initGL_();
+	void initImGui_();
+
+	// Scene setup methods
+	void setupDefaultScene_();
+	void setupDefaultFormat_();
+
+	// Main loop_ methods
+	void loop_();
+	void drawFrame_();
+	void processInput_(float dt);
+
+	// Cleanup
+	void cleanup_();
 
 private:
 	GLFWwindow* window_ = nullptr;
+	Scene scene_;
+	Renderer renderer_;
+	double prevTime_ = 0.0;
 
-	Camera cam_;
-	Scene scene_;				// entities + lights
-	Renderer renderer_; // owns GPU pipeline
+	// ImGui management
+	bool showModelLoader_ = true;
+	bool showSceneManager_ = true;
+	bool showStatsWindow_ = true;
 
-	double prevTime_ = 0.0;		 // high‑res frame timer
-	float modelScale_ = 0.06f; // scale factor for models
+	// Key state tracking
+	std::array<bool, 1024> keys_ = {false};
+	std::array<bool, 1024> prevKeys_ = {false}; // For detecting key press events
+
+	// Track which scene is currently loaded
+	std::string currentScene_ = "default";
+
+	// Callbacks
+	static void keyCallback_(GLFWwindow* window, int key, int scancode, int action, int mode);
+	static void mouseCallback_(GLFWwindow* window, double xpos, double ypos);
+	static void scrollCallback_(GLFWwindow* window, double xoffset, double yoffset);
 };
