@@ -19,7 +19,7 @@ int Application::run()
 	initImGui_();
 	setupDefaultFormat_();
 	setupDefaultScene_();
-	loop_();
+	mainLoop_();
 	cleanup_();
 	return 0;
 }
@@ -46,7 +46,6 @@ void Application::initWindow_()
 
 void Application::initImGui_()
 {
-	// Initialize ImGui
 	ImGuiManager::getInstance().init(window_);
 }
 
@@ -74,6 +73,19 @@ void Application::keyCallback_(GLFWwindow* window, int key, int scancode, int ac
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
 	}
+	
+	// Toggle UI windows with function keys
+	if (action == GLFW_PRESS) {
+		if (key == GLFW_KEY_F1) {
+			app->showModelLoader_ = !app->showModelLoader_;
+		}
+		else if (key == GLFW_KEY_F2) {
+			app->showSceneManager_ = !app->showSceneManager_;
+		}
+		else if (key == GLFW_KEY_F3) {
+			app->showStatsWindow_ = !app->showStatsWindow_;
+		}
+	}
 }
 
 void Application::mouseCallback_(GLFWwindow* window, double xpos, double ypos)
@@ -91,6 +103,10 @@ void Application::scrollCallback_(GLFWwindow* window, double xoffset, double yof
 {
 	// Handle zoom or other scroll behaviors if needed
 	// For example, adjust camera FOV or distance
+	Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+	
+	// Can implement camera zoom here
+	// app->scene_.cam.processScroll(yoffset);
 }
 
 void Application::initGL_()
@@ -167,52 +183,97 @@ void Application::processInput_(float dt)
 		// Reset camera position
 		scene_.setupCameraToViewScene();
 	}
-}
-
-void Application::loop_()
-{
-	prevTime_ = glfwGetTime();
-	while (!glfwWindowShouldClose(window_)) {
-		double now = glfwGetTime();
-		float dt = float(now - prevTime_);
-		prevTime_ = now;
-
-		// Start new ImGui frame
-		ImGuiManager::getInstance().newFrame();
-
-		processInput_(dt);
-		scene_.cam.updateMatrices(window_);
-
-		// Draw ImGui windows
-		if (showModelLoader_) {
-			ImGuiManager::getInstance().drawModelLoaderInterface(scene_);
-		}
-
-		if (showSceneManager_) {
-			ImGuiManager::getInstance().drawSceneEntityManager(scene_);
-		}
-
-		if (showStatsWindow_) {
-			// Simple stats window
-			ImGui::Begin("Statistics");
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-			ImGui::Text("Scene entities: %zu", scene_.ents.size());
-			ImGui::Text("Press TAB to toggle camera mode");
-			ImGui::Text("F1-F3 to toggle UI windows");
-			ImGui::End();
-		}
-
-		drawFrame_();
-
-		// Render ImGui on top of the scene
-		ImGuiManager::getInstance().render();
-
-		glfwSwapBuffers(window_);
-		glfwPollEvents();
+	
+	// Track key state transitions
+	for (int i = 0; i < 1024; i++) {
+		prevKeys_[i] = keys_[i];
 	}
 }
 
-void Application::drawFrame_()
+void Application::mainLoop_()
+{
+	prevTime_ = glfwGetTime();
+	
+	// Define the fixed time step for updates
+	const double fixedTimeStep = 1.0 / 60.0; // 60 FPS
+	double accumulator = 0.0;
+	
+	while (!glfwWindowShouldClose(window_)) {
+		// Measure time
+		double currentTime = glfwGetTime();
+		double frameTime = currentTime - prevTime_;
+		prevTime_ = currentTime;
+		
+		// Prevent spiral of death by capping frameTime
+		if (frameTime > 0.25) {
+			frameTime = 0.25;
+		}
+		
+		// Accumulate time for fixed updates
+		accumulator += frameTime;
+		
+		// Poll events before any updates
+		glfwPollEvents();
+		
+		// Process fixed updates
+		while (accumulator >= fixedTimeStep) {
+			tick_(fixedTimeStep);
+			accumulator -= fixedTimeStep;
+		}
+		
+		// Render with the interpolation factor
+		float alpha = accumulator / fixedTimeStep;
+		draw_(alpha);
+		
+		// Swap buffers
+		glfwSwapBuffers(window_);
+	}
+}
+
+void Application::tick_(float dt)
+{
+	// Process input and update game state
+	processInput_(dt);
+	
+	// Update camera matrices
+	scene_.cam.updateMatrices(window_);
+	
+	// Update any animated models or scene components
+	// (Not implemented in the current code, but you could add it here)
+}
+
+void Application::draw_(float interpolation)
+{
+	// Start new ImGui frame
+	ImGuiManager::getInstance().newFrame();
+	
+	// Draw ImGui windows
+	if (showModelLoader_) {
+		ImGuiManager::getInstance().drawModelLoaderInterface(scene_);
+	}
+
+	if (showSceneManager_) {
+		ImGuiManager::getInstance().drawSceneEntityManager(scene_);
+	}
+
+	if (showStatsWindow_) {
+		// Simple stats window
+		ImGui::Begin("Statistics");
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::Text("Scene entities: %zu", scene_.ents.size());
+		ImGui::Text("Press TAB to toggle camera mode");
+		ImGui::Text("F1-F3 to toggle UI windows");
+		ImGui::End();
+	}
+	
+	// Draw the 3D scene
+	drawScene_();
+	
+	// Render ImGui on top of the scene
+	ImGuiManager::getInstance().render();
+}
+
+void Application::drawScene_()
 {
 	int w, h;
 	glfwGetFramebufferSize(window_, &w, &h);

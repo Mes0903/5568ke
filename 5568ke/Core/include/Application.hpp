@@ -28,9 +28,11 @@ private:
 	void setupDefaultScene_();
 	void setupDefaultFormat_();
 
-	// Main loop_ methods
-	void loop_();
-	void drawFrame_();
+	// Main loop methods
+	void mainLoop_();
+	void tick_(float dt);     // Update game state (fixed time step)
+	void draw_(float interpolation); // Render the scene
+	void drawScene_();        // Draw the 3D scene
 	void processInput_(float dt);
 
 	// Cleanup
@@ -54,6 +56,10 @@ private:
 	// Track which scene is currently loaded
 	std::string currentScene_ = "default";
 
+	// Stats
+	float frameTime_ = 0.0f;
+	float fps_ = 0.0f;
+	
 	// Callbacks
 	static void keyCallback_(GLFWwindow* window, int key, int scancode, int action, int mode);
 	static void mouseCallback_(GLFWwindow* window, double xpos, double ypos);
