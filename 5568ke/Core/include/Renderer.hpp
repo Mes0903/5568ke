@@ -10,9 +10,6 @@
 
 class Renderer {
 public:
-	Renderer() = default;
-	~Renderer();
-
 	void setupDefaultRenderer();
 	void beginFrame(int w, int h, glm::vec3 const& clear);
 	void drawScene(Scene const& scene);
