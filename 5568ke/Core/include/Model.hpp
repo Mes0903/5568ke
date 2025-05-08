@@ -5,9 +5,11 @@
 #include <string>
 #include <vector>
 
+#include "Animation.hpp"
 #include "BoundingBox.hpp"
 #include "Mesh.hpp"
 #include "Shader.hpp"
+
 
 class Model {
 public:
@@ -28,8 +30,17 @@ public:
 	glm::vec3 defaultRotation = glm::vec3(0.0f);
 	glm::vec3 defaultTranslation = glm::vec3(0.0f);
 
+	// Animation data
+	Skeleton skeleton;
+	std::vector<Animation> animations;
+	AnimationPlayer animationPlayer;
+	bool hasAnimations = false;
+
 	// Methods for drawing
 	void draw(Shader& shader, glm::mat4 const& modelMatrix) const;
+
+	// Update animation (if any)
+	void updateAnimation(float dt);
 
 	// Calculate a centered and scaled matrix based on model's bounding box
 	glm::mat4 calculateCenteredTransform(float scale = 1.0f) const;

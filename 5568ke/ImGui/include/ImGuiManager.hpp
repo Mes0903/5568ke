@@ -39,6 +39,15 @@ public:
 	// Draw the scene entity manager interface
 	void drawSceneEntityManager(Scene& scene);
 
+	// Draw animation controls window
+	void drawAnimationControls(Scene& scene);
+
+	// Get animation controls visibility state
+	bool isAnimationControlsVisible() const { return showAnimationControls_; }
+
+	// Set animation controls visibility
+	void setAnimationControlsVisible(bool visible) { showAnimationControls_ = visible; }
+
 private:
 	ImGuiManager() = default;
 	~ImGuiManager() = default;
@@ -56,6 +65,9 @@ private:
 
 	// Scene management state
 	int selectedEntityIndex = -1;
+
+	// Animation controls state
+	bool showAnimationControls_ = false;
 
 	// Utility functions
 	void refreshFileList();

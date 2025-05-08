@@ -10,6 +10,9 @@
 
 class Renderer {
 public:
+	Renderer() = default;
+	~Renderer();
+
 	void setupDefaultRenderer();
 	void beginFrame(int w, int h, glm::vec3 const& clear);
 	void drawScene(Scene const& scene);
@@ -19,6 +22,7 @@ private:
 	// Different shaders for different rendering techniques
 	std::unordered_map<std::string, std::unique_ptr<Shader>> shaders_;
 	Shader* mainShader_ = nullptr;
+	Shader* animatedShader_ = nullptr; // For skinned mesh animation
 	Shader* skyboxShader_ = nullptr;
 
 	// Helper methods for different rendering passes

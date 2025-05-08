@@ -30,9 +30,9 @@ private:
 
 	// Main loop methods
 	void mainLoop_();
-	void tick_(float dt);     // Update game state (fixed time step)
+	void tick_(float dt);						 // Update game state (fixed time step)
 	void draw_(float interpolation); // Render the scene
-	void drawScene_();        // Draw the 3D scene
+	void drawScene_();							 // Draw the 3D scene
 	void processInput_(float dt);
 
 	// Cleanup
@@ -48,6 +48,7 @@ private:
 	bool showModelLoader_ = true;
 	bool showSceneManager_ = true;
 	bool showStatsWindow_ = true;
+	bool showAnimationControls_ = false;
 
 	// Key state tracking
 	std::array<bool, 1024> keys_ = {false};
@@ -59,7 +60,7 @@ private:
 	// Stats
 	float frameTime_ = 0.0f;
 	float fps_ = 0.0f;
-	
+
 	// Callbacks
 	static void keyCallback_(GLFWwindow* window, int key, int scancode, int action, int mode);
 	static void mouseCallback_(GLFWwindow* window, double xpos, double ypos);

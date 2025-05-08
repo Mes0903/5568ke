@@ -8,8 +8,24 @@ Model::~Model() { cleanup(); }
 void Model::draw(Shader& shader, glm::mat4 const& modelMatrix) const
 {
 	shader.setMat4("model", modelMatrix);
+
+	// If model has animations, set bone matrices
+	if (hasAnimations) {
+		for (int i = 0; i < skeleton.boneCount && i < Skeleton::MAX_BONES; i++) {
+			std::string uniformName = "boneMatrices[" + std::to_string(i) + "]";
+			shader.setMat4(uniformName.c_str(), skeleton.finalBoneMatrices[i]);
+		}
+	}
+
 	for (auto const& mesh : meshes)
 		mesh.draw(shader);
+}
+
+void Model::updateAnimation(float dt)
+{
+	if (hasAnimations) {
+		animationPlayer.update(dt);
+	}
 }
 
 glm::mat4 Model::calculateCenteredTransform(float scale) const
@@ -79,4 +95,8 @@ void Model::cleanup()
 	}
 	meshes.clear();
 	boundingBoxes.clear();
+
+	// Clean up animations
+	animations.clear();
+	skeleton.finalBoneMatrices.clear();
 }

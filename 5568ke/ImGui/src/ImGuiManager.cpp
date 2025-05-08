@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <iostream>
 
+#include "Animation.hpp"
 #include "ImGuiManager.hpp"
+#include "Model.hpp"
 
 bool ImGuiManager::init(GLFWwindow* window)
 {
@@ -260,7 +262,7 @@ void ImGuiManager::drawModelLoaderInterface(Scene& scene)
 		// Model name input
 		char nameBuffer[128] = "";
 		if (!modelName.empty()) {
-			strncpy(nameBuffer, modelName.c_str(), sizeof(nameBuffer) - 1);
+			std::strncpy(nameBuffer, modelName.c_str(), sizeof(nameBuffer) - 1);
 		}
 		if (ImGui::InputText("Model Name", nameBuffer, sizeof(nameBuffer))) {
 			modelName = nameBuffer;
@@ -281,6 +283,98 @@ void ImGuiManager::drawModelLoaderInterface(Scene& scene)
 		if (ImGui::Button("Load Model") && !selectedFile.empty() && selectedFile.find("[DIR]") == std::string::npos) {
 			loadSelectedModel(scene);
 		}
+	}
+
+	ImGui::End();
+}
+
+void ImGuiManager::drawAnimationControls(Scene& scene)
+{
+	ImGui::Begin("Animation Controls");
+
+	// If no entity is selected, show a message
+	if (selectedEntityIndex < 0 || selectedEntityIndex >= static_cast<int>(scene.ents.size())) {
+		ImGui::Text("Select an entity to control its animations");
+		ImGui::End();
+		return;
+	}
+
+	// Get the selected entity
+	Entity& entity = scene.ents[selectedEntityIndex];
+	if (!entity.model || !entity.model->hasAnimations) {
+		ImGui::Text("Selected entity has no animations");
+		ImGui::End();
+		return;
+	}
+
+	// Get animation player from the model
+	AnimationPlayer& player = entity.model->animationPlayer;
+
+	// Display animation name and controls
+	ImGui::Text("Model: %s", entity.name.c_str());
+
+	// Animation selection dropdown
+	size_t animCount = player.getAnimationCount();
+	if (animCount > 0) {
+		std::string currentAnim = player.getCurrentAnimationName();
+		if (ImGui::BeginCombo("Animation", currentAnim.c_str())) {
+			for (size_t i = 0; i < animCount; i++) {
+				std::string animName = player.getAnimationName(static_cast<int>(i));
+				bool isSelected = (currentAnim == animName);
+				if (ImGui::Selectable(animName.c_str(), isSelected)) {
+					player.setAnimation(static_cast<int>(i));
+				}
+
+				if (isSelected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		// Playback controls
+		bool isPlaying = player.isPlaying();
+		if (ImGui::Button(isPlaying ? "Pause" : "Play")) {
+			if (isPlaying) {
+				player.pause();
+			}
+			else {
+				player.play();
+			}
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Stop")) {
+			player.stop();
+		}
+
+		ImGui::SameLine();
+
+		// Loop toggle
+		static bool loop = true;
+		if (ImGui::Checkbox("Loop", &loop)) {
+			player.setLooping(loop);
+		}
+
+		// Animation progress slider
+		float progress = player.getProgress();
+		if (ImGui::SliderFloat("Progress", &progress, 0.0f, 1.0f, "%.2f")) {
+			player.setProgress(progress);
+		}
+
+		// Animation speed slider
+		static float speed = 1.0f;
+		if (ImGui::SliderFloat("Speed", &speed, 0.1f, 3.0f, "%.2f")) {
+			player.setSpeed(speed);
+		}
+
+		// Animation duration display
+		float duration = player.getCurrentDuration();
+		ImGui::Text("Duration: %.2f seconds", duration);
+	}
+	else {
+		ImGui::Text("No animations available");
 	}
 
 	ImGui::End();
@@ -321,6 +415,16 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 		// Transform editor
 		if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 			drawTransformEditor(entity.transform);
+		}
+
+		// Animation info if available
+		if (entity.model && entity.model->hasAnimations) {
+			ImGui::Text("Has animations: %zu", entity.model->animations.size());
+
+			// Show a button to open animation controls
+			if (ImGui::Button("Animation Controls")) {
+				showAnimationControls_ = true;
+			}
 		}
 
 		// Remove entity button

@@ -124,3 +124,12 @@ void Shader::setInt(char const* name, int value) const
 
 	glUniform1i(glGetUniformLocation(program_, name), value);
 }
+
+void Shader::setBool(char const* name, bool value) const
+{
+	int loc = glGetUniformLocation(program_, name);
+	// if (loc == -1)
+	// std::cerr << "[Shader] Warning: uniform '" << name << "' not found.\n";
+
+	glUniform1i(glGetUniformLocation(program_, name), static_cast<int>(value));
+}

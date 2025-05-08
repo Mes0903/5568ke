@@ -8,11 +8,17 @@ void Renderer::setupDefaultRenderer()
 	auto blinnPhongShader = std::make_unique<Shader>();
 	blinnPhongShader->resetShader("assets/shaders/blinn.vert", "assets/shaders/blinn.frag");
 
+	// Create animated shaders
+	auto animatedBlinnShader = std::make_unique<Shader>();
+	animatedBlinnShader->resetShader("assets/shaders/animated_blinn.vert", "assets/shaders/blinn.frag");
+
 	// Store in the shader map
 	shaders_["blinn"] = std::move(blinnPhongShader);
+	shaders_["animated_blinn"] = std::move(animatedBlinnShader);
 
 	// Set default main shader
 	mainShader_ = shaders_["blinn"].get();
+	animatedShader_ = shaders_["animated_blinn"].get();
 }
 
 void Renderer::beginFrame(int w, int h, glm::vec3 const& c)
@@ -49,26 +55,29 @@ void Renderer::drawScene(Scene const& scene)
 
 void Renderer::drawModels_(Scene const& scene)
 {
-	if (!mainShader_)
+	if (!mainShader_ || !animatedShader_)
 		return;
-
-	// Bind the main shader
-	mainShader_->bind();
-
-	// Set camera-related uniforms
-	mainShader_->setMat4("view", scene.cam.view());
-	mainShader_->setMat4("proj", scene.cam.proj());
-
-	// Setup lighting
-	setupLighting_(scene, mainShader_);
 
 	// Draw all visible entities
 	for (auto const& entity : scene.ents) {
 		if (!entity.visible || !entity.model)
 			continue;
 
+		// Choose the appropriate shader based on whether the model has animations
+		Shader* selectedShader = entity.model->hasAnimations ? animatedShader_ : mainShader_;
+
+		// Bind the selected shader
+		selectedShader->bind();
+
+		// Set camera-related uniforms
+		selectedShader->setMat4("view", scene.cam.view());
+		selectedShader->setMat4("proj", scene.cam.proj());
+
+		// Setup lighting
+		setupLighting_(scene, selectedShader);
+
 		// Draw the model with its transform
-		entity.model->draw(*mainShader_, entity.transform);
+		entity.model->draw(*selectedShader, entity.transform);
 
 		// Update stats
 		currentFrameStats_.drawCalls++;
@@ -98,4 +107,12 @@ void Renderer::endFrame()
 {
 	glBindVertexArray(0);
 	glUseProgram(0);
+}
+
+Renderer::~Renderer()
+{
+	// Clean up shader resources
+	shaders_.clear();
+	mainShader_ = nullptr;
+	animatedShader_ = nullptr;
 }

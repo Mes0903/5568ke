@@ -16,6 +16,7 @@ public:
 	void setVec3(char const* name, glm::vec3 const& vec) const;
 	void setFloat(char const* name, float value) const;
 	void setInt(char const* name, int value) const;
+	void setBool(char const* name, bool value) const;
 
 private:
 	unsigned program_ = 0;
