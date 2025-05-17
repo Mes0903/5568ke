@@ -11,7 +11,8 @@ class Node;
 class Model;
 
 /**
- * SkeletonVisualizer - Helper class for visualizing skeletal animations
+ * @brief Helper class for visualizing skeletal animations
+ *
  */
 class SkeletonVisualizer {
 public:
@@ -19,6 +20,7 @@ public:
 	void init();
 	void cleanup();
 
+	bool hasSkeletonData(std::shared_ptr<Model> model) const;
 	void generateSkeletonData(std::shared_ptr<Model> model);
 	void drawDebugLines(std::shared_ptr<Model> model, glm::mat4 const& modelMatrix,
 											std::shared_ptr<Shader> lineShader); // Draw simple debug lines with axes, grid, etc.

@@ -187,6 +187,25 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 	ImGui::EndChild();
 	ImGui::Separator();
 
+	// Skeleton visualization controls
+	ImGui::Text("Visualization Options:");
+	auto& renderer = Renderer::getInstance();
+	bool showSkeletons = renderer.showSkeletons;
+	bool showModels = renderer.showModels;
+
+	// Create checkbox for skeleton visibility
+	if (ImGui::Checkbox("Show Skeleton", &showSkeletons)) {
+		std::cout << "[ImGui] Setting skeleton visibility to: " << (showSkeletons ? "ON" : "OFF") << std::endl;
+		renderer.showSkeletons = showSkeletons;
+	}
+
+	// Add checkbox for model visibility
+	if (ImGui::Checkbox("Show Model", &showModels)) {
+		std::cout << "[ImGui] Setting model visibility to: " << (showModels ? "ON" : "OFF") << std::endl;
+		renderer.showModels = showModels;
+	}
+
+	ImGui::Separator();
 	// Entity controls (only show if an entity is selected)
 	if (selectedEntityIndex >= 0 && selectedEntityIndex < static_cast<int>(scene.ents.size())) {
 		Entity& entity = scene.ents[selectedEntityIndex];
@@ -276,9 +295,6 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 //
 void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 {
-	auto& renderer = Renderer::getInstance();
-	bool showSkeletons = renderer.showSkeletons;
-	bool showModels = renderer.showModels;
 	auto& animState = GlobalAnimationState::getInstance();
 
 	ImGui::Begin("Animation Controls");
@@ -453,23 +469,6 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		float progress = duration > 0.0f ? (animState.currentTime / duration) : 0.0f;
 		std::string progressStr = std::to_string(static_cast<int>(progress * 100)) + "%";
 		ImGui::ProgressBar(progress, ImVec2(-1, 0), progressStr.c_str());
-	}
-
-	ImGui::Separator();
-
-	// Skeleton visualization controls
-	ImGui::Text("Visualization Options:");
-
-	// Create checkbox for skeleton visibility
-	if (ImGui::Checkbox("Show Skeleton", &showSkeletons)) {
-		std::cout << "[ImGui] Setting skeleton visibility to: " << (showSkeletons ? "ON" : "OFF") << std::endl;
-		renderer.showSkeletons = showSkeletons;
-	}
-
-	// Add checkbox for model visibility
-	if (ImGui::Checkbox("Show Model", &showModels)) {
-		std::cout << "[ImGui] Setting model visibility to: " << (showModels ? "ON" : "OFF") << std::endl;
-		renderer.showModels = showModels;
 	}
 
 	ImGui::End();

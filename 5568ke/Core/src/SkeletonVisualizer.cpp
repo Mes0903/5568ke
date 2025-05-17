@@ -35,6 +35,31 @@ void SkeletonVisualizer::init()
 	glBindVertexArray(0);
 }
 
+void SkeletonVisualizer::cleanup()
+{
+	skeletonCache.clear();
+
+	if (vao_ != 0) {
+		glDeleteVertexArrays(1, &vao_);
+		vao_ = 0;
+	}
+
+	if (vbo_ != 0) {
+		glDeleteBuffers(1, &vbo_);
+		vbo_ = 0;
+	}
+}
+
+bool SkeletonVisualizer::hasSkeletonData(std::shared_ptr<Model> model) const
+{
+	if (!model)
+		return false;
+
+	// A model has skeleton data if it has animations
+	// Even if it has no joint matrices yet (they might be created when animation plays)
+	return !model->animations.empty();
+}
+
 void SkeletonVisualizer::generateSkeletonData(std::shared_ptr<Model> model)
 {
 	if (!model) {
@@ -140,21 +165,6 @@ void SkeletonVisualizer::processNodePositionsRecursive(std::shared_ptr<Node> nod
 	// Process children recursively
 	for (auto& child : node->children) {
 		processNodePositionsRecursive(child, vertices, colors, nodePosScale);
-	}
-}
-
-void SkeletonVisualizer::cleanup()
-{
-	skeletonCache.clear();
-
-	if (vao_ != 0) {
-		glDeleteVertexArrays(1, &vao_);
-		vao_ = 0;
-	}
-
-	if (vbo_ != 0) {
-		glDeleteBuffers(1, &vbo_);
-		vbo_ = 0;
 	}
 }
 

@@ -136,30 +136,35 @@ void Renderer::drawModels_(Scene const& scene)
 			entity.model->draw(*shaderToUse, scaledModelMatrix);
 		}
 
-		// Draw skeleton if enabled
-		if (showSkeletons) {
-			// Get the line shader
-			auto& lineShader = shaders_["line"];
-			if (!lineShader) {
-				std::cout << "[Renderer ERROR] Line shader is null!" << std::endl;
-				continue;
+		if (auto& skeletonVisualizer = SkeletonVisualizer::getInstance(); // check if the skeleton data exist
+				skeletonVisualizer.hasSkeletonData(entity.model)) {
+
+			// Draw skeleton if enabled
+			if (showSkeletons) {
+
+				// Get the line shader
+				auto& lineShader = shaders_["line"];
+				if (!lineShader) {
+					std::cout << "[Renderer ERROR] Line shader is null!" << std::endl;
+					continue;
+				}
+
+				// Set camera-related uniforms for line shader
+				lineShader->bind();
+				lineShader->sendMat4("view", scene.cam.view);
+				lineShader->sendMat4("proj", scene.cam.proj);
+
+				// Create a scaled transform for the skeleton visualization
+				glm::mat4 scaledModelMatrix = entity.transform;
+				glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(entity.scale));
+				scaledModelMatrix = scaledModelMatrix * scaleMatrix; // Apply scale
+
+				// Draw debug visualization
+				skeletonVisualizer.drawDebugLines(entity.model, scaledModelMatrix, lineShader);
+
+				// Rebind main shader after drawing lines
+				mainShader_->bind();
 			}
-
-			// Set camera-related uniforms for line shader
-			lineShader->bind();
-			lineShader->sendMat4("view", scene.cam.view);
-			lineShader->sendMat4("proj", scene.cam.proj);
-
-			// Create a scaled transform for the skeleton visualization
-			glm::mat4 scaledModelMatrix = entity.transform;
-			glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(entity.scale));
-			scaledModelMatrix = scaledModelMatrix * scaleMatrix; // Apply scale
-
-			// Draw debug visualization
-			SkeletonVisualizer::getInstance().drawDebugLines(entity.model, scaledModelMatrix, lineShader);
-
-			// Rebind main shader after drawing lines
-			mainShader_->bind();
 		}
 
 		// Update stats
