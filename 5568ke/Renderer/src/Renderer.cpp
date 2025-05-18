@@ -6,6 +6,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "LightVisualizer.hpp"
 #include "Model.hpp"
 #include "Scene.hpp"
 #include "Shader.hpp"
@@ -35,13 +36,21 @@ void Renderer::setupDefaultRenderer()
 	lineShaderForMap->resetShader("assets/shaders/line.vert", "assets/shaders/line.frag");
 	shaders_["line"] = std::move(lineShaderForMap);
 
+	auto lightPointShader = std::make_unique<Shader>();
+	lightPointShader->resetShader("assets/shaders/point.vert", "assets/shaders/point.frag");
+	shaders_["lightPoint"] = std::move(lightPointShader);
+
 	// Set default main shader
 	mainShader_ = shaders_["blinn"];
 	skinnedShader_ = shaders_["skinned"];
+	lightPointShader_ = shaders_["lightPoint"];
 
 	// Initialize skeleton visualizer
 	SkeletonVisualizer::getInstance().init();
 	std::cout << "[Renderer] SkeletonVisualizer initialized" << std::endl;
+
+	LightVisualizer::getInstance().init();
+	std::cout << "[Renderer] LightVisualizer initialized" << std::endl;
 }
 
 void Renderer::beginFrame(int w, int h, glm::vec3 const& c)
@@ -74,9 +83,9 @@ void Renderer::drawScene(Scene const& scene)
 	// Print frame stats (could be toggled with a debug flag)
 	// std::cout << "Frame stats: " << currentFrameStats_.drawCalls << " draw calls, "
 	//           << currentFrameStats_.visibleEntities << " visible entities" << std::endl;
+	LightVisualizer::getInstance().drawLights(scene, scene.cam.view, scene.cam.proj, lightPointShader_);
 }
 
-// Modify the drawModels_ method in Renderer.cpp to include skeleton visualization
 void Renderer::drawModels_(Scene const& scene)
 {
 	if (!mainShader_)
@@ -199,4 +208,5 @@ void Renderer::cleanup()
 {
 	// Clean up skeleton visualizer
 	SkeletonVisualizer::getInstance().cleanup();
+	LightVisualizer::getInstance().cleanup();
 }

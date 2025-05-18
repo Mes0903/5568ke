@@ -295,9 +295,6 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 	ImGui::End();
 }
 
-//
-// Add this implementation to ImGuiManager.cpp
-//
 void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 {
 	auto& animState = GlobalAnimationState::getInstance();

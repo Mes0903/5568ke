@@ -36,6 +36,7 @@ private:
 	std::shared_ptr<Shader> skyboxShader_;
 	std::shared_ptr<Shader> skinnedShader_;
 	std::shared_ptr<Shader> lineShader_;
+	std::shared_ptr<Shader> lightPointShader_;
 
 	// Helper methods for different rendering passes
 	void drawModels_(Scene const& scene);

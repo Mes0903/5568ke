@@ -36,6 +36,7 @@ set(PROJECT_MODULES
     Material
     ModelLoader
     ImGui
+    Renderer
 )
 
 add_executable(${PROJECT_NAME})
