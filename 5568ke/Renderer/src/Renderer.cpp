@@ -6,6 +6,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "BoundingBoxVisualizer.hpp"
 #include "LightVisualizer.hpp"
 #include "Model.hpp"
 #include "Scene.hpp"
@@ -51,6 +52,10 @@ void Renderer::setupDefaultRenderer()
 
 	LightVisualizer::getInstance().init();
 	std::cout << "[Renderer] LightVisualizer initialized" << std::endl;
+
+	BoundingBoxVisualizer::get().init();
+	shaders_["boundingBox"] = BoundingBoxVisualizer::get().boxShader;
+	std::cout << "[Renderer] BoundingBoxVisualizer initialized" << std::endl;
 }
 
 void Renderer::beginFrame(int w, int h, glm::vec3 const& c)
@@ -80,10 +85,8 @@ void Renderer::drawScene(Scene const& scene)
 	// Draw opaque models
 	drawModels_(scene);
 
-	// Print frame stats (could be toggled with a debug flag)
-	// std::cout << "Frame stats: " << currentFrameStats_.drawCalls << " draw calls, "
-	//           << currentFrameStats_.visibleEntities << " visible entities" << std::endl;
 	LightVisualizer::getInstance().drawLights(scene, scene.cam.view, scene.cam.proj, lightPointShader_);
+	BoundingBoxVisualizer::get().draw(scene, scene.cam.view, scene.cam.proj);
 }
 
 void Renderer::drawModels_(Scene const& scene)
@@ -123,11 +126,11 @@ void Renderer::drawModels_(Scene const& scene)
 				shaderToUse = skinnedShader_.get();
 
 				// Debug output
-				std::cout << "[Renderer] Using skinned shader for: " << entity.name << " (has " << entity.model->jointMatrices.size() << " joint matrices)"
-									<< std::endl;
+				// std::cout << "[Renderer] Using skinned shader for: " << entity.name << " (has " << entity.model->jointMatrices.size() << " joint matrices)"
+				// << std::endl;
 			}
 			else {
-				std::cout << "[Renderer] Using standard shader for: " << entity.name << std::endl;
+				// std::cout << "[Renderer] Using standard shader for: " << entity.name << std::endl;
 			}
 
 			// Bind the appropriate shader
@@ -191,8 +194,8 @@ void Renderer::setupLighting_(Scene const& scene, std::shared_ptr<Shader> const&
 	// This implementation assumes a simple lighting model like in the original code
 	if (!scene.lights.empty()) {
 		shader->sendVec3("lightPos", scene.lights[0].position);
-		shader->sendVec3("lightColor", scene.lights[0].color);
-		shader->sendFloat("lightIntensity", scene.lights[0].intensity);
+		// shader->sendVec3("lightColor", scene.lights[0].color);
+		// shader->sendFloat("lightIntensity", scene.lights[0].intensity);
 	}
 
 	shader->sendVec3("viewPos", scene.cam.pos);
@@ -209,4 +212,5 @@ void Renderer::cleanup()
 	// Clean up skeleton visualizer
 	SkeletonVisualizer::getInstance().cleanup();
 	LightVisualizer::getInstance().cleanup();
+	BoundingBoxVisualizer::get().cleanup();
 }
