@@ -28,6 +28,7 @@ public:
 	void drawModelLoaderInterface(Scene& scene);	// Model loader interface
 	void drawSceneEntityManager(Scene& scene);		// Scene entity manager interface
 	void drawAnimationControlPanel(Scene& scene); // Animation UI and skeleton control
+	void drawSceneControlWindow(Scene& scene);
 
 private:
 	ImGuiManager() = default;

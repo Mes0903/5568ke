@@ -44,6 +44,7 @@ private:
 	bool showSceneManager_{true};
 	bool showAnimationUI_{true};
 	bool showStatsWindow_{true};
+	bool showSceneControlsWindow_{true};
 
 	// Key state tracking
 	std::array<bool, 1024> keys_{};

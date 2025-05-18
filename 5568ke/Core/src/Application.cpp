@@ -325,6 +325,9 @@ void Application::tick_(float dt)
 
 	if (showStatsWindow_)
 		ImGuiManager::getInstance().drawStatusWindow(scene_);
+
+	if (showSceneControlsWindow_)
+		ImGuiManager::getInstance().drawSceneControlWindow(scene_);
 }
 
 void Application::render_()

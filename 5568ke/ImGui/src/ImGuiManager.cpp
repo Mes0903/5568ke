@@ -564,3 +564,99 @@ void ImGuiManager::drawStatusWindow(Scene& scene)
 
 	ImGui::End();
 }
+
+void ImGuiManager::drawSceneControlWindow(Scene& scene)
+{
+	ImGui::Begin("Scene Controls");
+
+	// Camera section
+	if (ImGui::CollapsingHeader("Camera Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
+		// Camera position
+		glm::vec3 camPos = scene.cam.pos;
+		if (ImGui::DragFloat3("Position", glm::value_ptr(camPos), 0.1f)) {
+			scene.cam.pos = camPos;
+		}
+
+		// Camera speed
+		float& camSpeed = GlobalAnimationState::getInstance().camSpeed;
+		ImGui::SliderFloat("Camera Speed", &camSpeed, 0.5f, 10.0f);
+
+		// Camera direction (read-only)
+		ImGui::Text("Direction: (%.2f, %.2f, %.2f)", scene.cam.front.x, scene.cam.front.y, scene.cam.front.z);
+
+		// Camera view reset buttons
+		if (ImGui::Button("Reset Camera")) {
+			scene.setupCameraToViewScene(1.2f);
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("View Selected Entity")) {
+			auto& entityManager = ImGuiManager::getInstance();
+			if (entityManager.selectedEntityIndex >= 0 && entityManager.selectedEntityIndex < scene.ents.size()) {
+				scene.setupCameraToViewEntity(scene.ents[entityManager.selectedEntityIndex].name);
+			}
+		}
+	}
+
+	// Lighting section
+	if (ImGui::CollapsingHeader("Lighting Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
+		for (size_t i = 0; i < scene.lights.size(); i++) {
+			ImGui::PushID(static_cast<int>(i));
+
+			std::string lightLabel = "Light " + std::to_string(i + 1);
+			if (ImGui::TreeNode(lightLabel.c_str())) {
+				// Light position
+				glm::vec3 lightPos = scene.lights[i].position;
+				if (ImGui::DragFloat3("Position", glm::value_ptr(lightPos), 0.1f)) {
+					scene.lights[i].position = lightPos;
+				}
+
+				// Light color with color picker
+				glm::vec3 lightColor = scene.lights[i].color;
+				if (ImGui::ColorEdit3("Color", glm::value_ptr(lightColor))) {
+					scene.lights[i].color = lightColor;
+				}
+
+				// Light intensity
+				float lightIntensity = scene.lights[i].intensity;
+				if (ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f)) {
+					scene.lights[i].intensity = lightIntensity;
+				}
+
+				// Add new light button
+				if (ImGui::Button("Add Light") && scene.lights.size() < 10) {
+					scene.addLight(glm::vec3(0.0f, 5.0f, 0.0f), // default position
+												 glm::vec3(1.0f, 1.0f, 1.0f), // default color (white)
+												 1.0f													// default intensity
+					);
+				}
+
+				// Remove light button
+				ImGui::SameLine();
+				if (ImGui::Button("Remove Light") && scene.lights.size() > 1) {
+					// Remove this light (if there's more than one)
+					scene.lights.erase(scene.lights.begin() + i);
+					ImGui::TreePop();
+					ImGui::PopID();
+					break; // Exit the loop since we've modified the array
+				}
+
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
+		}
+
+		// If there are no lights, provide a button to add one
+		if (scene.lights.empty()) {
+			if (ImGui::Button("Add Light")) {
+				scene.addLight(glm::vec3(2.0f, 3.0f, 3.0f), // default position
+											 glm::vec3(1.0f, 1.0f, 1.0f), // default color (white)
+											 1.0f													// default intensity
+				);
+			}
+		}
+	}
+
+	ImGui::End();
+}
