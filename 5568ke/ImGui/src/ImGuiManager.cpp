@@ -192,25 +192,6 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 	ImGui::EndChild();
 	ImGui::Separator();
 
-	// Skeleton visualization controls
-	ImGui::Text("Visualization Options:");
-	auto& renderer = Renderer::getInstance();
-	bool showSkeletons = renderer.showSkeletons;
-	bool showModels = renderer.showModels;
-
-	// Create checkbox for skeleton visibility
-	if (ImGui::Checkbox("Show Skeleton", &showSkeletons)) {
-		std::cout << "[ImGui] Setting skeleton visibility to: " << (showSkeletons ? "ON" : "OFF") << std::endl;
-		renderer.showSkeletons = showSkeletons;
-	}
-
-	// Add checkbox for model visibility
-	if (ImGui::Checkbox("Show Model", &showModels)) {
-		std::cout << "[ImGui] Setting model visibility to: " << (showModels ? "ON" : "OFF") << std::endl;
-		renderer.showModels = showModels;
-	}
-
-	ImGui::Separator();
 	// Entity controls (only show if an entity is selected)
 	if (selectedEntityIndex >= 0 && selectedEntityIndex < static_cast<int>(scene.ents.size())) {
 		Entity& entity = scene.ents[selectedEntityIndex];
@@ -565,6 +546,27 @@ void ImGuiManager::drawStatusWindow(Scene& scene)
 void ImGuiManager::drawSceneControlWindow(Scene& scene)
 {
 	ImGui::Begin("Scene Controls");
+
+	// Skeleton visualization controls
+	ImGui::Text("Visualization Options:");
+	auto& renderer = Renderer::getInstance();
+	bool& showSkeletons = renderer.showSkeletons;
+	bool& showModels = renderer.showModels;
+	bool& showWireFrame = renderer.showWireFrame;
+
+	if (ImGui::Checkbox("Show Skeleton", &showSkeletons)) {
+		std::cout << "[ImGui INFO] Setting skeleton visibility to: " << (showSkeletons ? "ON" : "OFF") << std::endl;
+	}
+
+	if (ImGui::Checkbox("Show Model", &showModels)) {
+		std::cout << "[ImGui INFO] Setting model visibility to: " << (showModels ? "ON" : "OFF") << std::endl;
+	}
+
+	if (ImGui::Checkbox("Show Wire Frame", &showWireFrame)) {
+		std::cout << "[ImGui INFO] Setting Wire Frame visibility to: " << (showWireFrame ? "ON" : "OFF") << std::endl;
+	}
+
+	ImGui::Separator();
 
 	// Camera section
 	if (ImGui::CollapsingHeader("Camera Controls", ImGuiTreeNodeFlags_DefaultOpen)) {

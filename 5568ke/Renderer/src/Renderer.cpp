@@ -117,6 +117,13 @@ void Renderer::drawModels_(Scene const& scene)
 		if (!entity.visible || !entity.model)
 			continue;
 
+		if (showWireFrame) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
+		else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+
 		// Draw the model only if models are enabled
 		if (showModels) {
 			// Choose shader based on if the model has joint matrices

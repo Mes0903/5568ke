@@ -24,6 +24,7 @@ public:
 	// Flag to control skeleton visualization
 	bool showSkeletons{true};
 	bool showModels{true};
+	bool showWireFrame{false};
 
 private:
 	Renderer() = default;
