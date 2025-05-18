@@ -98,16 +98,6 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 		}
 	}
 
-	// Calculate global bounding box and store on the model
-	if (!model->boundingBoxes.empty()) {
-		model->localSpaceBBox = ModelUtil::getLocalBBox(model->boundingBoxes);
-
-		// Print global bounding box info
-		std::cout << "[GltfLoader INFO] Model global bounding box: min(" << model->localSpaceBBox.min.x << ", " << model->localSpaceBBox.min.y << ", "
-							<< model->localSpaceBBox.min.z << "), max(" << model->localSpaceBBox.max.x << ", " << model->localSpaceBBox.max.y << ", "
-							<< model->localSpaceBBox.max.z << ")" << std::endl;
-	}
-
 	// Load node hierarchy and skin data if available
 	loadNodeHierarchy_(model, gltfModel);
 
@@ -127,6 +117,16 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 		// Calculate all node matrices starting from the root
 		NodeUtil::updateNodeMatricesRecursive(model->rootNode, glm::mat4(1.0f));
 		std::cout << "[GltfLoader] Node matrices calculated for static transforms" << std::endl;
+	}
+
+	// Calculate global bounding box and store on the model
+	if (!model->boundingBoxes.empty()) {
+		ModelUtil::setLocalBBox(*model);
+
+		// Print global bounding box info
+		std::cout << "[GltfLoader INFO] Model global bounding box: min(" << model->localSpaceBBox.min.x << ", " << model->localSpaceBBox.min.y << ", "
+							<< model->localSpaceBBox.min.z << "), max(" << model->localSpaceBBox.max.x << ", " << model->localSpaceBBox.max.y << ", "
+							<< model->localSpaceBBox.max.z << ")" << std::endl;
 	}
 
 	return model;

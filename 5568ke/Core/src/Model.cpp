@@ -126,6 +126,24 @@ void Model::initializeDefaultPose()
 }
 
 namespace ModelUtil {
+namespace {
+BoundingBox transformBBox(BoundingBox const& in, glm::mat4 const& M)
+{
+	BoundingBox out;
+	out.min = glm::vec3(std::numeric_limits<float>::max());
+	out.max = glm::vec3(std::numeric_limits<float>::lowest());
+
+	// 8 個 corner
+	for (int c = 0; c < 8; ++c) {
+		glm::vec3 p = {(c & 1 ? in.max.x : in.min.x), (c & 2 ? in.max.y : in.min.y), (c & 4 ? in.max.z : in.min.z)};
+		p = glm::vec3(M * glm::vec4(p, 1.0f));
+		out.min = glm::min(out.min, p);
+		out.max = glm::max(out.max, p);
+	}
+	return out;
+}
+} // namespace
+
 BoundingBox getMeshBBox(Mesh const& mesh)
 {
 	BoundingBox bbox;
@@ -151,29 +169,26 @@ BoundingBox getMeshBBox(Mesh const& mesh)
 	return bbox;
 }
 
-BoundingBox getLocalBBox(std::vector<BoundingBox> const& boundingBoxes)
+void setLocalBBox(Model& m)
 {
-	BoundingBox globalBBox;
+	BoundingBox global;
+	global.min = glm::vec3(std::numeric_limits<float>::max());
+	global.max = glm::vec3(std::numeric_limits<float>::lowest());
 
-	if (boundingBoxes.empty()) {
-		globalBBox.min = glm::vec3(0.0f);
-		globalBBox.max = glm::vec3(0.0f);
-		return globalBBox;
+	for (size_t i = 0; i < m.meshes.size(); ++i) {
+		BoundingBox local = m.boundingBoxes[i];
+		glm::mat4 nodeM(1.0f);
+
+		if (i < m.meshNodeIndices.size()) {
+			int nodeIdx = m.meshNodeIndices[i];
+			if (nodeIdx >= 0 && nodeIdx < m.nodes.size() && m.nodes[nodeIdx])
+				nodeM = m.nodes[nodeIdx]->getNodeMatrix();
+		}
+		BoundingBox world = transformBBox(local, nodeM);
+
+		global.min = glm::min(global.min, world.min);
+		global.max = glm::max(global.max, world.max);
 	}
-
-	globalBBox.min = glm::vec3(std::numeric_limits<float>::max());
-	globalBBox.max = glm::vec3(std::numeric_limits<float>::lowest());
-
-	for (auto const& bbox : boundingBoxes) {
-		globalBBox.min.x = std::min(globalBBox.min.x, bbox.min.x);
-		globalBBox.min.y = std::min(globalBBox.min.y, bbox.min.y);
-		globalBBox.min.z = std::min(globalBBox.min.z, bbox.min.z);
-
-		globalBBox.max.x = std::max(globalBBox.max.x, bbox.max.x);
-		globalBBox.max.y = std::max(globalBBox.max.y, bbox.max.y);
-		globalBBox.max.z = std::max(globalBBox.max.z, bbox.max.z);
-	}
-
-	return globalBBox;
+	m.localSpaceBBox = global;
 }
 } // namespace ModelUtil

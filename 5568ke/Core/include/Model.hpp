@@ -55,5 +55,5 @@ public:
 
 namespace ModelUtil {
 BoundingBox getMeshBBox(Mesh const& mesh);
-BoundingBox getLocalBBox(std::vector<BoundingBox> const& boundingBoxes); // Local space bounding box for one model
+void setLocalBBox(Model& m);
 } // namespace ModelUtil
