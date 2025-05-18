@@ -51,7 +51,14 @@ void Mesh::draw(Shader const& shader) const
 	for (auto const& prim : primitives) {
 		if (prim.material)
 			prim.material->bind(shader);
-		glDrawElements(GL_TRIANGLES, prim.indexCount, GL_UNSIGNED_INT, (void*)(prim.indexOffset * sizeof(unsigned int)));
+
+		if (prim.doubleSided)
+			glDisable(GL_CULL_FACE);
+
+		glDrawElements(GL_TRIANGLES, prim.indexCount, GL_UNSIGNED_INT, (void*)(prim.indexOffset * sizeof(unsigned)));
+
+		if (prim.doubleSided)
+			glEnable(GL_CULL_FACE);
 	}
 	glBindVertexArray(0);
 }

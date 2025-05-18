@@ -252,6 +252,7 @@ void GltfLoader::processMesh_(tinygltf::Model const& model, tinygltf::Mesh const
 		Primitive outPrimitive;
 		outPrimitive.indexOffset = outMesh.indices.size(); // The first index of this primitive inside the big, concatenated index buffer we are building.
 																											 // The renderer will add this offset when it calls 'glDrawElements' later.
+		outPrimitive.doubleSided = (primitive.material >= 0 && model.materials[primitive.material].doubleSided);
 
 		// Get position attribute
 		if (primitive.attributes.find("POSITION") != primitive.attributes.end()) {
