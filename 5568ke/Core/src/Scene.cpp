@@ -29,9 +29,6 @@ void Camera::processKeyboard(float dt, GLFWwindow* w)
 
 void Camera::processMouse(double xpos, double ypos)
 {
-	static bool firstMouse = true;
-	static double lastX, lastY;
-
 	if (firstMouse) {
 		lastX = xpos;
 		lastY = ypos;
@@ -59,6 +56,14 @@ void Camera::updateMatrices(GLFWwindow* w)
 {
 	int fbW, fbH;
 	glfwGetFramebufferSize(w, &fbW, &fbH);
+
+	// Prevent division by zero or negative aspect ratio
+	if (fbW <= 0 || fbH <= 0) {
+		std::cout << "[Camera] Warning: Invalid framebuffer size: " << fbW << "x" << fbH << std::endl;
+		fbW = fbW <= 0 ? 1 : fbW;
+		fbH = fbH <= 0 ? 1 : fbH;
+	}
+
 	view = glm::lookAt(pos, pos + front, glm::vec3(0, 1, 0));
 	proj = glm::perspective(glm::radians(45.0f), float(fbW) / fbH, 0.1f, 100.f);
 }
@@ -143,7 +148,7 @@ void Scene::setupCameraToViewEntity(std::string const& entityName, float distanc
 	glm::vec3 worldCenter = glm::vec3(worldCenterHomogeneous) / worldCenterHomogeneous.w;
 
 	// Calculate entity size
-	glm::vec3 size = bbox.max - bbox.min;
+	glm::vec3 size = (bbox.max - bbox.min) * entity->scale;
 	float maxDim = std::max(std::max(size.x, size.y), size.z);
 
 	// Adjust distance based on entity size if not explicitly specified

@@ -74,6 +74,10 @@ void Application::keyCallback_(GLFWwindow* window, int key, int scancode, int ac
 		int cursorMode = glfwGetInputMode(window, GLFW_CURSOR);
 		if (cursorMode == GLFW_CURSOR_NORMAL) {
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+			// reset first-mouse flag so next movement starts clean
+			Camera& cam = static_cast<Application*>(glfwGetWindowUserPointer(window))->scene_.cam;
+			cam.firstMouse = true;
 		}
 		else {
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -119,8 +123,8 @@ void Application::setupDefaultScene_()
 	scene_.addLight(glm::vec3(2.0f, 3.0f, 3.0f), glm::vec3(1.0f), 1.0f);
 
 	// Load the character model by default
-	std::string const path = "assets/models/japanese_classroom/scene.gltf";
-	// std::string const path = "assets/models/smo_ina/scene.gltf";
+	// std::string const path = "assets/models/japanese_classroom/scene.gltf";
+	std::string const path = "assets/models/smo_ina/scene.gltf";
 	std::string const name = "ina";
 
 	// Add a character model

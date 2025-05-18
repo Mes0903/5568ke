@@ -47,6 +47,11 @@ public:
 	// Cached matrices
 	glm::mat4 view{1.0f};
 	glm::mat4 proj{1.0f};
+
+	// For camera update
+	bool firstMouse{true};
+	double lastX;
+	double lastY;
 };
 
 class Scene {
