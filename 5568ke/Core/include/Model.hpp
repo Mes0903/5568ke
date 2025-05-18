@@ -23,7 +23,7 @@ public:
 	std::vector<Mesh> meshes;
 	std::vector<int> meshNodeIndices; // Mesh -> Node mapping
 	std::vector<BoundingBox> boundingBoxes;
-	BoundingBox globalBoundingBox;
+	BoundingBox localSpaceBBox;
 
 	// Metadata
 	std::string name;
@@ -52,3 +52,8 @@ public:
 	std::vector<int> nodeToJointMapping;
 	std::vector<std::vector<std::pair<int, float>>> vertexJoints; // For each vertex: pairs of (jointIndex, weight)
 };
+
+namespace ModelUtil {
+BoundingBox getMeshBBox(Mesh const& mesh);
+BoundingBox getLocalBBox(std::vector<BoundingBox> const& boundingBoxes); // Local space bounding box for one model
+} // namespace ModelUtil

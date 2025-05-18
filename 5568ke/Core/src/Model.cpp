@@ -53,6 +53,7 @@ void Model::draw(Shader const& shader, glm::mat4 const& modelMatrix) const
 		meshes[i].draw(shader);
 	}
 }
+
 void Model::cleanup()
 {
 	// Clean up any dynamically allocated resources
@@ -123,3 +124,56 @@ void Model::initializeDefaultPose()
 
 	std::cout << "[Model] Initialized default pose with " << jointMatrices.size() << " joint matrices" << std::endl;
 }
+
+namespace ModelUtil {
+BoundingBox getMeshBBox(Mesh const& mesh)
+{
+	BoundingBox bbox;
+	if (mesh.vertices.empty()) {
+		bbox.min = glm::vec3(0.0f);
+		bbox.max = glm::vec3(0.0f);
+		return bbox;
+	}
+
+	bbox.min = glm::vec3(std::numeric_limits<float>::max());
+	bbox.max = glm::vec3(std::numeric_limits<float>::lowest());
+
+	for (auto const& vertex : mesh.vertices) {
+		bbox.min.x = std::min(bbox.min.x, vertex.position.x);
+		bbox.min.y = std::min(bbox.min.y, vertex.position.y);
+		bbox.min.z = std::min(bbox.min.z, vertex.position.z);
+
+		bbox.max.x = std::max(bbox.max.x, vertex.position.x);
+		bbox.max.y = std::max(bbox.max.y, vertex.position.y);
+		bbox.max.z = std::max(bbox.max.z, vertex.position.z);
+	}
+
+	return bbox;
+}
+
+BoundingBox getLocalBBox(std::vector<BoundingBox> const& boundingBoxes)
+{
+	BoundingBox globalBBox;
+
+	if (boundingBoxes.empty()) {
+		globalBBox.min = glm::vec3(0.0f);
+		globalBBox.max = glm::vec3(0.0f);
+		return globalBBox;
+	}
+
+	globalBBox.min = glm::vec3(std::numeric_limits<float>::max());
+	globalBBox.max = glm::vec3(std::numeric_limits<float>::lowest());
+
+	for (auto const& bbox : boundingBoxes) {
+		globalBBox.min.x = std::min(globalBBox.min.x, bbox.min.x);
+		globalBBox.min.y = std::min(globalBBox.min.y, bbox.min.y);
+		globalBBox.min.z = std::min(globalBBox.min.z, bbox.min.z);
+
+		globalBBox.max.x = std::max(globalBBox.max.x, bbox.max.x);
+		globalBBox.max.y = std::max(globalBBox.max.y, bbox.max.y);
+		globalBBox.max.z = std::max(globalBBox.max.z, bbox.max.z);
+	}
+
+	return globalBBox;
+}
+} // namespace ModelUtil

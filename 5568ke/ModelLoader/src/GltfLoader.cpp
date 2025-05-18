@@ -82,7 +82,7 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 		outMesh.setup();
 
 		// Calculate bounding box
-		BoundingBox bbox = calculateBoundingBox_(outMesh);
+		BoundingBox bbox = ModelUtil::getMeshBBox(outMesh);
 		model->boundingBoxes.push_back(bbox);
 
 		// Add mesh to model
@@ -100,12 +100,12 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 
 	// Calculate global bounding box and store on the model
 	if (!model->boundingBoxes.empty()) {
-		model->globalBoundingBox = calculateGlobalBoundingBox_(model->boundingBoxes);
+		model->localSpaceBBox = ModelUtil::getLocalBBox(model->boundingBoxes);
 
 		// Print global bounding box info
-		std::cout << "[GltfLoader INFO] Model global bounding box: min(" << model->globalBoundingBox.min.x << ", " << model->globalBoundingBox.min.y << ", "
-							<< model->globalBoundingBox.min.z << "), max(" << model->globalBoundingBox.max.x << ", " << model->globalBoundingBox.max.y << ", "
-							<< model->globalBoundingBox.max.z << ")" << std::endl;
+		std::cout << "[GltfLoader INFO] Model global bounding box: min(" << model->localSpaceBBox.min.x << ", " << model->localSpaceBBox.min.y << ", "
+							<< model->localSpaceBBox.min.z << "), max(" << model->localSpaceBBox.max.x << ", " << model->localSpaceBBox.max.y << ", "
+							<< model->localSpaceBBox.max.z << ")" << std::endl;
 	}
 
 	// Load node hierarchy and skin data if available
@@ -752,55 +752,4 @@ void GltfLoader::loadSkinData_(std::shared_ptr<Model> model, tinygltf::Model con
 			std::cout << "[GltfLoader INFO] Loaded joint weights for " << vertexCount << " vertices" << std::endl;
 		}
 	}
-}
-
-BoundingBox GltfLoader::calculateBoundingBox_(Mesh const& mesh)
-{
-	BoundingBox bbox;
-	if (mesh.vertices.empty()) {
-		bbox.min = glm::vec3(0.0f);
-		bbox.max = glm::vec3(0.0f);
-		return bbox;
-	}
-
-	bbox.min = glm::vec3(std::numeric_limits<float>::max());
-	bbox.max = glm::vec3(std::numeric_limits<float>::lowest());
-
-	for (auto const& vertex : mesh.vertices) {
-		bbox.min.x = std::min(bbox.min.x, vertex.position.x);
-		bbox.min.y = std::min(bbox.min.y, vertex.position.y);
-		bbox.min.z = std::min(bbox.min.z, vertex.position.z);
-
-		bbox.max.x = std::max(bbox.max.x, vertex.position.x);
-		bbox.max.y = std::max(bbox.max.y, vertex.position.y);
-		bbox.max.z = std::max(bbox.max.z, vertex.position.z);
-	}
-
-	return bbox;
-}
-
-BoundingBox GltfLoader::calculateGlobalBoundingBox_(std::vector<BoundingBox> const& boundingBoxes)
-{
-	BoundingBox globalBBox;
-
-	if (boundingBoxes.empty()) {
-		globalBBox.min = glm::vec3(0.0f);
-		globalBBox.max = glm::vec3(0.0f);
-		return globalBBox;
-	}
-
-	globalBBox.min = glm::vec3(std::numeric_limits<float>::max());
-	globalBBox.max = glm::vec3(std::numeric_limits<float>::lowest());
-
-	for (auto const& bbox : boundingBoxes) {
-		globalBBox.min.x = std::min(globalBBox.min.x, bbox.min.x);
-		globalBBox.min.y = std::min(globalBBox.min.y, bbox.min.y);
-		globalBBox.min.z = std::min(globalBBox.min.z, bbox.min.z);
-
-		globalBBox.max.x = std::max(globalBBox.max.x, bbox.max.x);
-		globalBBox.max.y = std::max(globalBBox.max.y, bbox.max.y);
-		globalBBox.max.z = std::max(globalBBox.max.z, bbox.max.z);
-	}
-
-	return globalBBox;
 }

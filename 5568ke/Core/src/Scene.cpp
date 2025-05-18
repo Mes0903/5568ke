@@ -102,7 +102,7 @@ void Scene::setupCameraToViewScene(float padding)
 			continue;
 
 		// Transform the model's bounding box by the entity transform
-		BoundingBox modelBounds = entity.model->globalBoundingBox;
+		BoundingBox modelBounds = entity.model->localSpaceBBox;
 		glm::vec3 corners[8] = {
 				glm::vec3(modelBounds.min.x, modelBounds.min.y, modelBounds.min.z), glm::vec3(modelBounds.max.x, modelBounds.min.y, modelBounds.min.z),
 				glm::vec3(modelBounds.min.x, modelBounds.max.y, modelBounds.min.z), glm::vec3(modelBounds.max.x, modelBounds.max.y, modelBounds.min.z),
@@ -142,7 +142,7 @@ void Scene::setupCameraToViewEntity(std::string const& entityName, float distanc
 	}
 
 	// Calculate entity center in world space
-	BoundingBox& bbox = entity->model->globalBoundingBox;
+	BoundingBox& bbox = entity->model->localSpaceBBox;
 	glm::vec3 modelCenter = (bbox.min + bbox.max) * 0.5f;
 	glm::vec4 worldCenterHomogeneous = entity->transform * glm::vec4(modelCenter, 1.0f);
 	glm::vec3 worldCenter = glm::vec3(worldCenterHomogeneous) / worldCenterHomogeneous.w;

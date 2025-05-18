@@ -119,7 +119,7 @@ void ModelRegistry::addModelToSceneCentered(Scene& scene, std::shared_ptr<Model>
 	}
 
 	// Calculate model center based on bounding box
-	glm::vec3 center = (model->globalBoundingBox.min + model->globalBoundingBox.max) * 0.5f;
+	glm::vec3 center = (model->localSpaceBBox.min + model->localSpaceBBox.max) * 0.5f;
 
 	// Calculate appropriate scale factor if needed
 	if (scale <= 0.0f) {

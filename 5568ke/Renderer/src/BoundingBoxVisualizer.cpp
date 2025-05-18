@@ -83,7 +83,7 @@ void BoundingBoxVisualizer::draw(Scene const& scene, glm::mat4 const& view, glm:
 		// world-space transform incl. scale
 		glm::mat4 M = e.transform * glm::scale(glm::mat4(1.0f), glm::vec3(e.scale));
 
-		BoundingBox const& bb = e.model->globalBoundingBox;
+		BoundingBox const& bb = e.model->localSpaceBBox;
 		glm::vec3 minW(std::numeric_limits<float>::max());
 		glm::vec3 maxW(-std::numeric_limits<float>::max());
 

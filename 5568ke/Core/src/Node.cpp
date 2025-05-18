@@ -54,6 +54,6 @@ void Node::calculateNodeMatrix(glm::mat4 const& parentMatrix)
 	// Debug log the result if it's significantly different from identity
 	glm::vec3 position = glm::vec3(nodeMatrix_[3]);
 	if (glm::length(position) > 0.01f) {
-		std::cout << "[Node INFO] Node " << nodeNum << " global position: " << position.x << ", " << position.y << ", " << position.z << std::endl;
+		std::cout << "[Node INFO] Node " << nodeNum << " local space position: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 	}
 }

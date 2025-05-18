@@ -38,8 +38,4 @@ private:
 
 	// Skin and animation data loading
 	void loadSkinData_(std::shared_ptr<Model> model, tinygltf::Model const& gltfModel);
-
-	// Bounding box calculations
-	BoundingBox calculateBoundingBox_(Mesh const& mesh);
-	BoundingBox calculateGlobalBoundingBox_(std::vector<BoundingBox> const& boundingBoxes);
 };
