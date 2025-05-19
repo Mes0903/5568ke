@@ -24,7 +24,6 @@ struct Light {
 struct Entity {
 	std::shared_ptr<Model> model;
 	glm::mat4 transform;
-	BoundingBox worldBoundingBox;
 	float scale{1.0f};
 
 	// Additional entity properties

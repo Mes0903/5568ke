@@ -82,11 +82,7 @@ void AnimationClip::setAnimationFrame(std::vector<std::shared_ptr<Node>> const& 
 	}
 
 	// Update all nodes' local matrices
-	for (auto const& node : nodes) {
-		if (node) {
-			node->calculateLocalTRSMatrix();
-		}
-	}
+	NodeUtil::updateNodeListLocalTRSMatrix(nodes);
 
 	// Second pass to update global matrices starting from the root
 	// First find the root node (usually node 0)
@@ -100,7 +96,7 @@ void AnimationClip::setAnimationFrame(std::vector<std::shared_ptr<Node>> const& 
 
 	// If root node was found, update matrices starting from it
 	if (rootNode) {
-		NodeUtil::updateNodeMatricesRecursive(rootNode, glm::mat4(1.0f));
+		NodeUtil::updateNodeTreeMatricesRecursive(rootNode, glm::mat4(1.0f));
 	}
 }
 

@@ -30,7 +30,7 @@ private:
 	~SkeletonVisualizer() = default;
 
 	// Helper methods for visualization
-	void processNodePositionsRecursive(std::shared_ptr<Node> node, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors, float nodePosScale);
+	void processNodeTreePositionsRecursive(std::shared_ptr<Node> node, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors, float nodePosScale);
 	void addDotJoint(glm::vec3 const& position, float radius, glm::vec3 const& color, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors);
 
 	// OpenGL resources

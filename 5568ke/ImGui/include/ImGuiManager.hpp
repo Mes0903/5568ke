@@ -51,5 +51,5 @@ private:
 	void refreshFileList();
 	void loadSelectedModel(Scene& scene);
 	void drawTransformEditor(Entity& entity);
-	void drawNodeHierarchy(std::shared_ptr<Node> node, int depth);
+	void drawNodeTree(std::shared_ptr<Node> node, int depth);
 };

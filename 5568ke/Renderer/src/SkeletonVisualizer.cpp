@@ -85,7 +85,7 @@ void SkeletonVisualizer::generateSkeletonData(std::shared_ptr<Model> model)
 
 	// Process the node hierarchy recursively starting from the root
 	float nodePosScale = 0.005f;
-	processNodePositionsRecursive(model->rootNode, skeletonData.vertices, skeletonData.colors, nodePosScale);
+	processNodeTreePositionsRecursive(model->rootNode, skeletonData.vertices, skeletonData.colors, nodePosScale);
 
 	std::cout << "[SkeletonVisualizer] Generated " << skeletonData.vertices.size() << " vertices for skeleton lines" << std::endl;
 
@@ -93,8 +93,8 @@ void SkeletonVisualizer::generateSkeletonData(std::shared_ptr<Model> model)
 	skeletonCache[model] = skeletonData;
 }
 
-void SkeletonVisualizer::processNodePositionsRecursive(std::shared_ptr<Node> node, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors,
-																											 float nodePosScale)
+void SkeletonVisualizer::processNodeTreePositionsRecursive(std::shared_ptr<Node> node, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors,
+																													 float nodePosScale)
 {
 	if (!node)
 		return;
@@ -107,7 +107,7 @@ void SkeletonVisualizer::processNodePositionsRecursive(std::shared_ptr<Node> nod
 	if (glm::length(nodePos) < 0.001f) {
 		// Process children anyway
 		for (auto& child : node->children) {
-			processNodePositionsRecursive(child, vertices, colors, nodePosScale);
+			processNodeTreePositionsRecursive(child, vertices, colors, nodePosScale);
 		}
 		return;
 	}
@@ -164,7 +164,7 @@ void SkeletonVisualizer::processNodePositionsRecursive(std::shared_ptr<Node> nod
 
 	// Process children recursively
 	for (auto& child : node->children) {
-		processNodePositionsRecursive(child, vertices, colors, nodePosScale);
+		processNodeTreePositionsRecursive(child, vertices, colors, nodePosScale);
 	}
 }
 
@@ -188,7 +188,7 @@ void SkeletonVisualizer::drawDebugLines(std::shared_ptr<Model> model, glm::mat4 
 	if (model->rootNode) {
 		// Use the same scale factor for skeleton as for the model
 		float nodePosScale = 1.0f; // This will be applied with the model matrix
-		processNodePositionsRecursive(model->rootNode, vertices, colors, nodePosScale);
+		processNodeTreePositionsRecursive(model->rootNode, vertices, colors, nodePosScale);
 	}
 
 	// Skip if no vertices

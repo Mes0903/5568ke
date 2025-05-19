@@ -234,7 +234,7 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 			ImGui::Text("Root node ID: %d, Name: %s", rootNode->nodeNum, rootNode->nodeName.empty() ? "<unnamed>" : rootNode->nodeName.c_str());
 
 			// Show full hierarchy starting at root
-			drawNodeHierarchy(rootNode, 0);
+			drawNodeTree(rootNode, 0);
 
 			// If root node doesn't have all nodes as descendants,
 			// find potential other top-level nodes
@@ -264,7 +264,7 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 					}
 
 					// Show each disconnected node
-					drawNodeHierarchy(entity.model->nodes[i], 0);
+					drawNodeTree(entity.model->nodes[i], 0);
 				}
 			}
 		}
@@ -349,7 +349,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 				// Reset animation visually
 				if (entity->model->animations.size() > selectedClipIndex) {
 					entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, 0.0f);
-					entity->model->updateJointMatrices();
+					entity->model->updateMatrices();
 				}
 			}
 			if (isSelected) {
@@ -389,7 +389,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 			// Update animation frame if this is the current entity
 			if (entity->model->animations.size() > selectedClipIndex) {
 				entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, currentTime);
-				entity->model->updateJointMatrices();
+				entity->model->updateMatrices();
 			}
 		}
 	}
@@ -406,7 +406,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		// Apply initial frame for visual feedback
 		if (entity->model->animations.size() > selectedClipIndex) {
 			entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, 0.0f);
-			entity->model->updateJointMatrices();
+			entity->model->updateMatrices();
 		}
 	}
 	ImGui::SameLine();
@@ -438,7 +438,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		// Reset visually
 		if (entity->model->animations.size() > selectedClipIndex) {
 			entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, 0.0f);
-			entity->model->updateJointMatrices();
+			entity->model->updateMatrices();
 		}
 	}
 
@@ -458,7 +458,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 }
 
 // Implement the node hierarchy display function
-void ImGuiManager::drawNodeHierarchy(std::shared_ptr<Node> node, int depth)
+void ImGuiManager::drawNodeTree(std::shared_ptr<Node> node, int depth)
 {
 	if (!node) {
 		return;
@@ -518,7 +518,7 @@ void ImGuiManager::drawNodeHierarchy(std::shared_ptr<Node> node, int depth)
 
 		// Process all children
 		for (auto const& child : node->children) {
-			drawNodeHierarchy(child, depth + 1);
+			drawNodeTree(child, depth + 1);
 		}
 
 		ImGui::Unindent();

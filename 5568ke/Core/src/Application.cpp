@@ -124,7 +124,7 @@ void Application::setupDefaultScene_()
 
 	// Load the character model by default
 	// std::string const path = "assets/models/japanese_classroom/scene.gltf";
-	std::string const path = "assets/models/smo_ina/scene.gltf";
+	std::string const path = "assets/models/Woman/woman.gltf";
 	std::string const name = "ina";
 
 	// Add a character model
@@ -139,8 +139,7 @@ void Application::setupDefaultScene_()
 			model->initializeDefaultPose();
 
 			// Add to scene
-			registry.addModelToSceneCentered(scene_, model, name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f),
-																			 0.0f); // Use calculated scale
+			registry.addModelToSceneCentered(scene_, model, name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f));
 
 			// Store entity name in animation state
 			auto& animState = GlobalAnimationState::getInstance();
@@ -270,7 +269,7 @@ void Application::processInput_(float dt)
 								<< std::endl;
 
 			clip->setAnimationFrame(entity->model->nodes, animState.currentTime);
-			entity->model->updateJointMatrices();
+			entity->model->updateMatrices();
 		}
 	}
 }
@@ -307,7 +306,7 @@ void Application::tick_(float dt)
 
 			// Apply animation
 			clip->setAnimationFrame(entity->model->nodes, animState.currentTime);
-			entity->model->updateJointMatrices();
+			entity->model->updateMatrices();
 		}
 	}
 

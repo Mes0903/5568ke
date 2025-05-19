@@ -19,6 +19,17 @@ public:
 	Model() = default;
 	~Model();
 
+	// Methods for drawing
+	void draw(Shader const& shader, glm::mat4 const& modelMatrix) const;
+
+	// Cleanup resources
+	void cleanup();
+
+	// Animation helper methods
+	void updateMatrices();
+	void initializeDefaultPose();
+
+public:
 	// Core model data
 	std::vector<Mesh> meshes;
 	std::vector<int> meshNodeIndices; // Mesh -> Node mapping
@@ -29,18 +40,6 @@ public:
 	std::string name;
 	std::string filePath;
 
-	// Methods for drawing
-	void draw(Shader const& shader, glm::mat4 const& modelMatrix) const;
-
-	// Cleanup resources
-	void cleanup();
-
-	// Animation helper methods
-	void updateJointMatrices();
-	void updateJointMatricesFromNodes();
-	void initializeDefaultPose();
-
-public:
 	// Animation support
 	std::vector<std::shared_ptr<AnimationClip>> animations;
 	std::vector<std::shared_ptr<Node>> nodes; // node list
@@ -52,8 +51,3 @@ public:
 	std::vector<int> nodeToJointMapping;
 	std::vector<std::vector<std::pair<int, float>>> vertexJoints; // For each vertex: pairs of (jointIndex, weight)
 };
-
-namespace ModelUtil {
-BoundingBox getMeshBBox(Mesh const& mesh);
-void setLocalBBox(Model& m);
-} // namespace ModelUtil

@@ -6,19 +6,47 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Model.hpp"
+
 namespace NodeUtil {
-void updateNodeMatricesRecursive(std::shared_ptr<Node> node, glm::mat4 const& parentMatrix)
+void updateNodeTreeMatricesRecursive(std::shared_ptr<Node> node, glm::mat4 const& parentMatrix)
 {
 	if (!node) {
 		return;
 	}
 
 	// Calculate global matrix
-	node->calculateNodeMatrix(parentMatrix);
+	node->updateNodeMatrix(parentMatrix);
 
 	// Process all children
 	for (auto const& child : node->children) {
-		updateNodeMatricesRecursive(child, node->getNodeMatrix());
+		updateNodeTreeMatricesRecursive(child, node->getNodeMatrix());
+	}
+}
+
+void updateNodeListLocalTRSMatrix(std::vector<std::shared_ptr<Node>> const& nodes)
+{
+	for (auto const& node : nodes) {
+		if (node) {
+			node->updateLocalTRSMatrix();
+		}
+	}
+}
+
+void updateNodeListJointMatrices(Model& model)
+{
+	// Update the joint matrices
+	for (auto const& node : model.nodes) {
+		if (!node)
+			continue;
+
+		int nodeIndex = node->nodeNum;
+		if (nodeIndex < model.nodeToJointMapping.size()) {
+			int jointIndex = model.nodeToJointMapping[nodeIndex];
+			if (jointIndex >= 0 && jointIndex < model.jointMatrices.size() && jointIndex < model.inverseBindMatrices.size()) {
+				model.jointMatrices[jointIndex] = node->getNodeMatrix() * model.inverseBindMatrices[jointIndex];
+			}
+		}
 	}
 }
 
@@ -27,7 +55,7 @@ std::shared_ptr<Node> createRoot(int nodeNum) { return std::make_shared<Node>(no
 
 Node::Node(int nodeNum) : nodeNum(nodeNum) {}
 
-void Node::calculateLocalTRSMatrix()
+void Node::updateLocalTRSMatrix()
 {
 	// Create transform = T * R * S
 	glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), translation);
@@ -46,7 +74,7 @@ void Node::calculateLocalTRSMatrix()
 	}
 }
 
-void Node::calculateNodeMatrix(glm::mat4 const& parentMatrix)
+void Node::updateNodeMatrix(glm::mat4 const& parentMatrix)
 {
 	// Multiply parent matrix by local matrix to get global matrix
 	nodeMatrix_ = parentMatrix * localTRSMatrix_;

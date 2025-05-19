@@ -82,7 +82,7 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 		outMesh.setup();
 
 		// Calculate bounding box
-		BoundingBox bbox = ModelUtil::getMeshBBox(outMesh);
+		BoundingBox bbox = BBoxUtil::getMeshBBox(outMesh);
 		model->boundingBoxes.push_back(bbox);
 
 		// Add mesh to model
@@ -115,13 +115,13 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 
 	if (model->rootNode) {
 		// Calculate all node matrices starting from the root
-		NodeUtil::updateNodeMatricesRecursive(model->rootNode, glm::mat4(1.0f));
+		NodeUtil::updateNodeTreeMatricesRecursive(model->rootNode, glm::mat4(1.0f));
 		std::cout << "[GltfLoader] Node matrices calculated for static transforms" << std::endl;
 	}
 
 	// Calculate global bounding box and store on the model
 	if (!model->boundingBoxes.empty()) {
-		ModelUtil::setLocalBBox(*model);
+		BBoxUtil::updateLocalBBox(*model);
 
 		// Print global bounding box info
 		std::cout << "[GltfLoader INFO] Model global bounding box: min(" << model->localSpaceBBox.min.x << ", " << model->localSpaceBBox.min.y << ", "
@@ -619,8 +619,8 @@ void GltfLoader::processNodeTreeRecursive_(std::shared_ptr<Model> model, tinyglt
 
 	try {
 		// Calculate matrices
-		currentNode->calculateLocalTRSMatrix();
-		currentNode->calculateNodeMatrix(parentMatrix);
+		currentNode->updateLocalTRSMatrix();
+		currentNode->updateNodeMatrix(parentMatrix);
 
 		// Process child nodes
 		std::cout << "[GltfLoader INFO] Node " << nodeIndex << " has " << node.children.size() << " children" << std::endl;
