@@ -76,7 +76,7 @@ public:
 	void setupCameraToViewScene(float padding = 1.2f);
 
 	// Position the camera to view a specific entity
-	void setupCameraToViewEntity(std::string const& entityName, float distance = 3.0f);
+	void setupCameraToViewEntity(std::string const& entityName, float distance = 0.0f);
 
 	// Load a skybox
 	void loadSkybox(std::string const& directory);

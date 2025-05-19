@@ -214,11 +214,6 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 			ModelRegistry::getInstance().removeModelFromScene(scene, entity.name);
 			selectedEntityIndex = -1; // Reset selection
 		}
-
-		// Focus camera on entity button
-		if (ImGui::Button("Focus Camera")) {
-			scene.setupCameraToViewEntity(entity.name, 3.0 * entity.scale);
-		}
 	}
 
 	ImGui::Separator();

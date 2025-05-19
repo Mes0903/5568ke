@@ -103,6 +103,8 @@ void Scene::setupCameraToViewScene(float padding)
 
 		// Transform the model's bounding box by the entity transform
 		BoundingBox modelBounds = entity.model->localSpaceBBox;
+		glm::mat4 worldM = entity.transform * glm::scale(glm::mat4(1.0f), glm::vec3(entity.scale));
+
 		glm::vec3 corners[8] = {
 				glm::vec3(modelBounds.min.x, modelBounds.min.y, modelBounds.min.z), glm::vec3(modelBounds.max.x, modelBounds.min.y, modelBounds.min.z),
 				glm::vec3(modelBounds.min.x, modelBounds.max.y, modelBounds.min.z), glm::vec3(modelBounds.max.x, modelBounds.max.y, modelBounds.min.z),
@@ -111,7 +113,7 @@ void Scene::setupCameraToViewScene(float padding)
 
 		// Transform each corner and expand global bounds
 		for (int i = 0; i < 8; i++) {
-			glm::vec4 transformedCorner = entity.transform * glm::vec4(corners[i], 1.0f);
+			glm::vec4 transformedCorner = worldM * glm::vec4(corners[i], 1.0f);
 			glm::vec3 worldPos = glm::vec3(transformedCorner) / transformedCorner.w;
 
 			globalBounds.min = glm::min(globalBounds.min, worldPos);
@@ -119,14 +121,15 @@ void Scene::setupCameraToViewScene(float padding)
 		}
 	}
 
-	// Calculate scene center and dimensions
+	// Calculate scene center and bounding radius
 	glm::vec3 center = (globalBounds.min + globalBounds.max) * 0.5f;
 	glm::vec3 size = globalBounds.max - globalBounds.min;
-	float maxDim = std::max(std::max(size.x, size.y), size.z) * padding;
+	float radius = std::max({size.x, size.y, size.z}) * 0.5f * padding;
 
-	// Position camera to view the entire scene
-	float distance = maxDim;
-	glm::vec3 cameraPos = center + glm::vec3(0.0f, size.y * 0.25f, distance);
+	// Position camera so the entire scene fits the view frustum
+	float fov = glm::radians(45.0f);
+	float distance = radius / std::tan(fov * 0.5f);
+	glm::vec3 cameraPos = center + glm::vec3(0.0f, radius * 0.1f, distance);
 
 	// Set camera to look at the center of the scene
 	cam.lookAt(cameraPos, center);
@@ -142,20 +145,34 @@ void Scene::setupCameraToViewEntity(std::string const& entityName, float distanc
 	}
 
 	// Calculate entity center in world space
-	BoundingBox& bbox = entity->model->localSpaceBBox;
-	glm::vec3 modelCenter = (bbox.min + bbox.max) * 0.5f;
-	glm::vec4 worldCenterHomogeneous = entity->transform * glm::vec4(modelCenter, 1.0f);
-	glm::vec3 worldCenter = glm::vec3(worldCenterHomogeneous) / worldCenterHomogeneous.w;
+	BoundingBox bbox = entity->model->localSpaceBBox;
+	glm::mat4 worldM = entity->transform * glm::scale(glm::mat4(1.0f), glm::vec3(entity->scale));
 
-	// Calculate entity size
-	glm::vec3 size = (bbox.max - bbox.min) * entity->scale;
-	float maxDim = std::max(std::max(size.x, size.y), size.z);
+	BoundingBox worldBounds;
+	worldBounds.min = glm::vec3(std::numeric_limits<float>::max());
+	worldBounds.max = glm::vec3(std::numeric_limits<float>::lowest());
+
+	glm::vec3 corners[8] = {glm::vec3(bbox.min.x, bbox.min.y, bbox.min.z), glm::vec3(bbox.max.x, bbox.min.y, bbox.min.z),
+													glm::vec3(bbox.min.x, bbox.max.y, bbox.min.z), glm::vec3(bbox.max.x, bbox.max.y, bbox.min.z),
+													glm::vec3(bbox.min.x, bbox.min.y, bbox.max.z), glm::vec3(bbox.max.x, bbox.min.y, bbox.max.z),
+													glm::vec3(bbox.min.x, bbox.max.y, bbox.max.z), glm::vec3(bbox.max.x, bbox.max.y, bbox.max.z)};
+
+	for (int i = 0; i < 8; ++i) {
+		glm::vec4 t = worldM * glm::vec4(corners[i], 1.0f);
+		glm::vec3 p = glm::vec3(t) / t.w;
+		worldBounds.min = glm::min(worldBounds.min, p);
+		worldBounds.max = glm::max(worldBounds.max, p);
+	}
+
+	glm::vec3 worldCenter = (worldBounds.min + worldBounds.max) * 0.5f;
+	glm::vec3 size = worldBounds.max - worldBounds.min;
+	float radius = std::max({size.x, size.y, size.z}) * 0.5f;
 
 	// Adjust distance based on entity size if not explicitly specified
-	float viewDistance = (distance <= 0.0f) ? maxDim * 2.0f : distance;
+	float viewDistance = (distance <= 0.0f) ? radius / std::tan(glm::radians(45.0f) * 0.5f) : distance;
 
 	// Position camera to view the entity
-	glm::vec3 cameraPos = worldCenter + glm::vec3(0.0f, size.y * 0.1f, viewDistance);
+	glm::vec3 cameraPos = worldCenter + glm::vec3(0.0f, radius * 0.1f, viewDistance);
 
 	// Set camera to look at the entity center
 	cam.lookAt(cameraPos, worldCenter);

@@ -124,7 +124,7 @@ void Application::setupDefaultScene_()
 
 	// Load the character model by default
 	// std::string const path = "assets/models/japanese_classroom/scene.gltf";
-	std::string const path = "assets/models/Woman/woman.gltf";
+	std::string const path = "assets/models/smo_ina/scene.gltf";
 	std::string const name = "ina";
 
 	// Add a character model
