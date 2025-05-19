@@ -172,64 +172,7 @@ void Application::processInput_(float dt)
 		scene_.cam.processKeyboard(dt, window_);
 	}
 
-	// Additional input processing
-	if (keys_[GLFW_KEY_R]) {
-		// Reset camera position
-		scene_.setupCameraToViewScene();
-	}
-
-	if (keys_[GLFW_KEY_1] && !prevKeys_[GLFW_KEY_1]) {
-		currentAnimationClip = 0;
-		std::cout << "[Animation] Selected animation clip 0" << std::endl;
-	}
-	if (keys_[GLFW_KEY_2] && !prevKeys_[GLFW_KEY_2]) {
-		currentAnimationClip = 1;
-		std::cout << "[Animation] Selected animation clip 1" << std::endl;
-	}
-	if (keys_[GLFW_KEY_3] && !prevKeys_[GLFW_KEY_3]) {
-		currentAnimationClip = 2;
-		std::cout << "[Animation] Selected animation clip 2" << std::endl;
-	}
-
 	auto& animState = GlobalAnimationState::getInstance();
-
-	// Space to toggle animation
-	if (keys_[GLFW_KEY_SPACE] && !prevKeys_[GLFW_KEY_SPACE]) {
-		if (animState.isAnimating) {
-			animState.pause();
-		}
-		else {
-			animState.resume();
-		}
-		std::cout << "[Animation] Animation " << (animState.isAnimating ? "resumed" : "paused") << std::endl;
-	}
-
-	// Keys 1-3 to select animation
-	if (keys_[GLFW_KEY_1] && !prevKeys_[GLFW_KEY_1]) {
-		animState.clipIndex = 0;
-		std::cout << "[Animation] Selected clip 0" << std::endl;
-	}
-	else if (keys_[GLFW_KEY_2] && !prevKeys_[GLFW_KEY_2]) {
-		animState.clipIndex = 1;
-		std::cout << "[Animation] Selected clip 1" << std::endl;
-	}
-	else if (keys_[GLFW_KEY_3] && !prevKeys_[GLFW_KEY_3]) {
-		animState.clipIndex = 2;
-		std::cout << "[Animation] Selected clip 2" << std::endl;
-	}
-
-	// +/- to adjust speed
-	{
-		float speed = animState.getAnimateSpeed();
-		if (keys_[GLFW_KEY_EQUAL]) {
-			animState.setAnimateSpeed(speed + 0.1f * dt);
-			std::cout << "[Animation] Speed: " << animState.getAnimateSpeed() << std::endl;
-		}
-		else if (keys_[GLFW_KEY_MINUS]) {
-			animState.setAnimateSpeed(speed - 0.1f * dt);
-			std::cout << "[Animation] Speed: " << animState.getAnimateSpeed() << std::endl;
-		}
-	}
 
 	// Update animation if playing
 	if (animState.isAnimating) {
