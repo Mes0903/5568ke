@@ -5,10 +5,10 @@
 #include "Shader.hpp"
 #include "include_5568ke.hpp"
 
-BoundingBoxVisualizer& BoundingBoxVisualizer::get()
+BoundingBoxVisualizer& BoundingBoxVisualizer::getInstance()
 {
-	static BoundingBoxVisualizer v;
-	return v;
+	static BoundingBoxVisualizer instance;
+	return instance;
 }
 
 void BoundingBoxVisualizer::init()

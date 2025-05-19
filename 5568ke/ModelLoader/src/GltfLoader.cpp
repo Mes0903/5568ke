@@ -52,7 +52,6 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 
 	// Create and populate model
 	std::shared_ptr<Model> model = std::make_shared<Model>();
-	model->filePath = path;
 	model->meshNodeIndices.resize(gltfModel.meshes.size(), -1);
 
 	std::cout << "[GltfLoader INFO] GLTF file has:\n"
@@ -109,7 +108,7 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 	// Load animations if available
 	if (!gltfModel.animations.empty()) {
 		loadAnimations_(model, gltfModel);
-		model->initializeDefaultPose();
+		model->updateMatrices();
 		std::cout << "[GltfLoader INFO] Loaded " << model->animations.size() << " animation clips" << std::endl;
 	}
 

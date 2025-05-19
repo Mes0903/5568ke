@@ -1,6 +1,8 @@
 #pragma once
 
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -27,7 +29,6 @@ struct Entity {
 	float scale{1.0f};
 
 	// Additional entity properties
-	std::string name;
 	bool visible{true};
 	bool castsShadow{true};
 };
@@ -57,8 +58,7 @@ public:
 
 class Scene {
 public:
-	Scene() = default;
-	~Scene();
+	static Scene& getInstance();
 
 	// Core scene components
 	Camera cam;
@@ -66,9 +66,9 @@ public:
 	std::vector<Light> lights;
 
 	// Helper methods for scene management
-	void addEntity(std::shared_ptr<Model> model, glm::mat4 const& transform, std::string const& name = "");
+	void addEntity(std::shared_ptr<Model> model, glm::mat4 const& transform);
 	void removeEntity(std::string const& name);
-	Entity* findEntity(std::string const& name);
+	std::optional<std::reference_wrapper<Entity>> findEntity(std::string const& name);
 
 	void addLight(glm::vec3 const& position, glm::vec3 const& color = glm::vec3(1.0f), float intensity = 1.0f);
 
@@ -85,12 +85,12 @@ public:
 	void cleanup();
 
 private:
-	// Map for quick entity lookup by name
-	std::unordered_map<std::string, size_t> entityMap_;
+	Scene() = default;
+	~Scene();
 
 	// Skybox resources
 	unsigned int skyboxVAO_{0};
 	unsigned int skyboxVBO_{0};
 	unsigned int skyboxTexture_{0};
-	bool hasSkybox_ = false;
+	bool hasSkybox_{false};
 };

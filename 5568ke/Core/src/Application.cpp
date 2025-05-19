@@ -7,11 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "AnimationClip.hpp"
-#include "GlobalAnimationState.hpp"
-#include "ImGuiManager.hpp"
 #include "Model.hpp"
-#include "ModelRegistry.hpp"
-#include "Renderer.hpp"
 
 Application::Application()
 {
@@ -53,7 +49,7 @@ void Application::initWindow_()
 	glfwSetScrollCallback(window_, scrollCallback_);
 }
 
-void Application::initImGui_() { ImGuiManager::getInstance().init(window_); }
+void Application::initImGui_() { ImGuiManagerRef.init(window_); }
 
 void Application::keyCallback_(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
@@ -76,7 +72,7 @@ void Application::keyCallback_(GLFWwindow* window, int key, int scancode, int ac
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 			// reset first-mouse flag so next movement starts clean
-			Camera& cam = static_cast<Application*>(glfwGetWindowUserPointer(window))->scene_.cam;
+			Camera& cam = static_cast<Application*>(glfwGetWindowUserPointer(window))->sceneRef.cam;
 			cam.firstMouse = true;
 		}
 		else {
@@ -96,7 +92,7 @@ void Application::mouseCallback_(GLFWwindow* window, double xpos, double ypos)
 	// Only process mouse movement for camera if cursor is disabled
 	int cursorMode = glfwGetInputMode(window, GLFW_CURSOR);
 	if (cursorMode == GLFW_CURSOR_DISABLED) {
-		app->scene_.cam.processMouse(xpos, ypos);
+		app->sceneRef.cam.processMouse(xpos, ypos);
 	}
 }
 
@@ -120,7 +116,7 @@ void Application::initGL_()
 void Application::setupDefaultScene_()
 {
 	// Set up a default light (args: position, color, intensity)
-	scene_.addLight(glm::vec3(2.0f, 3.0f, 3.0f), glm::vec3(1.0f), 1.0f);
+	sceneRef.addLight(glm::vec3(2.0f, 3.0f, 3.0f), glm::vec3(1.0f), 1.0f);
 
 	// Load the character model by default
 	// std::string const path = "assets/models/japanese_classroom/scene.gltf";
@@ -128,29 +124,25 @@ void Application::setupDefaultScene_()
 	std::string const name = "ina";
 
 	// Add a character model
-	auto& registry = ModelRegistry::getInstance();
+	auto& registry = registryRef;
 
 	try {
 		// Load the model
 		std::shared_ptr<Model> model = registry.loadModel(path, name);
 
 		if (model) {
-			// Initialize the default pose
-			model->initializeDefaultPose();
-
 			// Add to scene
-			registry.addModelToSceneCentered(scene_, model, name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f));
+			registry.addModelToSceneCentered(sceneRef, model, name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f));
 
 			// Store entity name in animation state
-			auto& animState = GlobalAnimationState::getInstance();
-			animState.entityName = name;
+			animStateRef.entityName = name;
 
 			// Set up camera
-			scene_.setupCameraToViewEntity(name);
+			sceneRef.setupCameraToViewEntity(name);
 		}
 
 		// Initialize renderer
-		Renderer::getInstance().setupDefaultRenderer();
+		rendererRef.setupDefaultRenderer();
 
 	} catch (std::runtime_error const& error) {
 		std::cout << error.what() << std::endl;
@@ -169,51 +161,54 @@ void Application::processInput_(float dt)
 	int cursorMode = glfwGetInputMode(window_, GLFW_CURSOR);
 	if (cursorMode == GLFW_CURSOR_DISABLED) {
 		// Process keyboard input for camera movement
-		scene_.cam.processKeyboard(dt, window_);
+		sceneRef.cam.processKeyboard(dt, window_);
 	}
 
-	auto& animState = GlobalAnimationState::getInstance();
-
 	// Update animation if playing
-	if (animState.isAnimating) {
+	if (animStateRef.isAnimating) {
 		// Find entity if not set
-		if (animState.entityName.empty()) {
-			for (auto& entity : scene_.ents) {
+		if (animStateRef.entityName.empty()) {
+			for (auto& entity : sceneRef.ents) {
 				if (entity.model && !entity.model->animations.empty()) {
-					animState.entityName = entity.name;
-					std::cout << "[Animation] Found entity: " << animState.entityName << std::endl;
+					animStateRef.entityName = entity.model->modelName;
+					std::cout << "[Animation] Found entity: " << animStateRef.entityName << std::endl;
 					break;
 				}
 			}
 		}
 
 		// Update animation
-		Entity* entity = scene_.findEntity(animState.entityName);
-		if (entity && entity->model && !entity->model->animations.empty()) {
-			// Ensure valid clip index
-			if (animState.clipIndex >= entity->model->animations.size()) {
-				animState.clipIndex = 0;
-			}
+		auto entOpt = sceneRef.findEntity(animStateRef.entityName);
+		if (!entOpt)
+			return;
 
-			// Get clip
-			auto& clip = entity->model->animations[animState.clipIndex];
+		Entity& entity = entOpt->get();
+		auto model = entity.model;
+		if (!model || model->animations.empty())
+			return;
 
-			// Advance time
-			animState.currentTime += dt * animState.getAnimateSpeed();
+		// Ensure valid clip index
+		if (animStateRef.clipIndex >= model->animations.size())
+			animStateRef.clipIndex = 0;
 
-			// Loop if needed
-			float duration = clip->getDuration();
-			if (animState.currentTime > duration) {
-				animState.currentTime = std::fmod(animState.currentTime, duration);
-			}
+		// Get clip
+		auto& clip = model->animations[animStateRef.clipIndex];
 
-			// Update animation frame
-			std::cout << "[Animation] Updating frame: time=" << animState.currentTime << ", entity=" << animState.entityName << ", clip=" << animState.clipIndex
-								<< std::endl;
+		// Advance time
+		animStateRef.currentTime += dt * animStateRef.getAnimateSpeed();
 
-			clip->setAnimationFrame(entity->model->nodes, animState.currentTime);
-			entity->model->updateMatrices();
+		// Loop if needed
+		float duration = clip->getDuration();
+		if (animStateRef.currentTime > duration) {
+			animStateRef.currentTime = std::fmod(animStateRef.currentTime, duration);
 		}
+
+		// Update animation frame
+		std::cout << "[Animation] Updating frame: time=" << animStateRef.currentTime << ", entity=" << animStateRef.entityName
+							<< ", clip=" << animStateRef.clipIndex << std::endl;
+
+		clip->setAnimationFrame(model->nodes, animStateRef.currentTime);
+		model->updateMatrices();
 	}
 }
 
@@ -223,57 +218,59 @@ void Application::tick_(float dt)
 	processInput_(dt);
 
 	// Get global animation state
-	auto& animState = GlobalAnimationState::getInstance();
 
 	// Update animation state
-	if (animState.isAnimating && !animState.entityName.empty()) {
-		// Find the entity
-		Entity* entity = scene_.findEntity(animState.entityName);
-		if (entity && entity->model && !entity->model->animations.empty()) {
-			// Make sure clip index is valid
-			if (animState.clipIndex >= entity->model->animations.size()) {
-				animState.clipIndex = 0;
-			}
+	if (animStateRef.isAnimating && !animStateRef.entityName.empty()) {
+		// Look up the target entity
+		auto entOpt = sceneRef.findEntity(animStateRef.entityName);
+		if (!entOpt)
+			return;
 
-			// Get animation clip
-			auto& clip = entity->model->animations[animState.clipIndex];
+		Entity& entity = entOpt->get();
+		auto model = entity.model;
+		if (!model || model->animations.empty())
+			return;
 
-			// Update animation time
-			animState.currentTime += dt * animState.getAnimateSpeed();
+		// Ensure clip index is within bounds
+		if (animStateRef.clipIndex >= model->animations.size())
+			animStateRef.clipIndex = 0;
 
-			// Loop if needed
-			float duration = clip->getDuration();
-			if (duration > 0 && animState.currentTime > duration) {
-				animState.currentTime = std::fmod(animState.currentTime, duration);
-			}
+		// Advance animation time
+		auto& clip = model->animations[animStateRef.clipIndex];
+		animStateRef.currentTime += dt * animStateRef.getAnimateSpeed();
 
-			// Apply animation
-			clip->setAnimationFrame(entity->model->nodes, animState.currentTime);
-			entity->model->updateMatrices();
+		// Wrap time if the clip should loop
+		float duration = clip->getDuration();
+		if (duration > 0.0f && animStateRef.currentTime > duration) {
+			animStateRef.currentTime = std::fmod(animStateRef.currentTime, duration);
 		}
+
+		// Apply the animation pose and update matrices
+		clip->setAnimationFrame(model->nodes, animStateRef.currentTime);
+		model->updateMatrices();
 	}
 
 	// Update camera matrices
-	scene_.cam.updateMatrices(window_);
+	sceneRef.cam.updateMatrices(window_);
 
 	// Update ImGui windows
-	ImGuiManager::getInstance().newFrame();
+	ImGuiManagerRef.newFrame();
 
 	if (showModelLoader_) {
-		// ImGuiManager::getInstance().drawModelLoaderInterface(scene_);
+		ImGuiManagerRef.drawModelLoaderInterface(sceneRef);
 	}
 
 	if (showSceneManager_)
-		ImGuiManager::getInstance().drawSceneEntityManager(scene_);
+		ImGuiManagerRef.drawSceneEntityManager(sceneRef);
 
 	if (showAnimationUI_)
-		ImGuiManager::getInstance().drawAnimationControlPanel(scene_);
+		ImGuiManagerRef.drawAnimationControlPanel(sceneRef);
 
 	if (showStatsWindow_)
-		ImGuiManager::getInstance().drawStatusWindow(scene_);
+		ImGuiManagerRef.drawStatusWindow(sceneRef);
 
 	if (showSceneControlsWindow_)
-		ImGuiManager::getInstance().drawSceneControlWindow(scene_);
+		ImGuiManagerRef.drawSceneControlWindow(sceneRef);
 }
 
 void Application::render_()
@@ -282,16 +279,16 @@ void Application::render_()
 	glfwGetFramebufferSize(window_, &w, &h);
 
 	// Begin the frame
-	Renderer::getInstance().beginFrame(w, h, {0.1f, 0.11f, 0.13f});
+	rendererRef.beginFrame(w, h, {0.1f, 0.11f, 0.13f});
 
 	// Draw 3D scene
-	Renderer::getInstance().drawScene(scene_);
+	rendererRef.drawScene(sceneRef);
 
 	// End frame (cleanup rendering state)
-	Renderer::getInstance().endFrame();
+	rendererRef.endFrame();
 
 	// Render ImGui on top of the scene
-	ImGuiManager::getInstance().render();
+	ImGuiManagerRef.render();
 
 	// Swap buffers
 	glfwSwapBuffers(window_);
@@ -317,16 +314,13 @@ void Application::loop_()
 void Application::cleanup_()
 {
 	// Clean up ImGui
-	ImGuiManager::getInstance().cleanup();
-
-	// Clean up model registry resources
-	ModelRegistry::getInstance().cleanup();
+	ImGuiManagerRef.cleanup();
 
 	// Clean up scene resources
-	scene_.cleanup();
+	sceneRef.cleanup();
 
 	// Clean up renderer (add this)
-	Renderer::getInstance().cleanup();
+	rendererRef.cleanup();
 
 	// Clean up GLFW
 	glfwDestroyWindow(window_);

@@ -7,6 +7,10 @@
 
 #include <glm/vec3.hpp>
 
+#include "BoundingBoxVisualizer.hpp"
+#include "LightVisualizer.hpp"
+#include "SkeletonVisualizer.hpp"
+
 class Scene;
 class Shader;
 
@@ -25,6 +29,10 @@ public:
 	bool showSkeletons{true};
 	bool showModels{true};
 	bool showWireFrame{false};
+
+	SkeletonVisualizer& skeletonVisualizerRef = SkeletonVisualizer::getInstance();
+	LightVisualizer& lightVisualizerRef = LightVisualizer::getInstance();
+	BoundingBoxVisualizer& boundingBoxVisualizerRef = BoundingBoxVisualizer::getInstance();
 
 private:
 	Renderer() = default;

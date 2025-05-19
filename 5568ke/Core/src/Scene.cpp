@@ -2,9 +2,11 @@
 
 #include "Scene.hpp"
 
-#include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include <iostream>
+#include <ranges>
+
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "BoundingBox.hpp"
 #include "GlobalAnimationState.hpp"
@@ -84,6 +86,12 @@ void Camera::lookAt(glm::vec3 const& position, glm::vec3 const& target)
 	view = glm::lookAt(pos, pos + front, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+Scene& Scene::getInstance()
+{
+	static Scene instance;
+	return instance;
+}
+
 // Scene methods implementation for camera setup
 void Scene::setupCameraToViewScene(float padding)
 {
@@ -137,16 +145,17 @@ void Scene::setupCameraToViewScene(float padding)
 
 void Scene::setupCameraToViewEntity(std::string const& entityName, float distance)
 {
-	Entity* entity = findEntity(entityName);
-	if (!entity || !entity->model) {
-		// Fall back to viewing the entire scene
+	auto entOpt = findEntity(entityName);
+	if (!entOpt || !entOpt->get().model) {
 		setupCameraToViewScene();
 		return;
 	}
 
+	Entity const& entity = entOpt->get();
+
 	// Calculate entity center in world space
-	BoundingBox bbox = entity->model->localSpaceBBox;
-	glm::mat4 worldM = entity->transform * glm::scale(glm::mat4(1.0f), glm::vec3(entity->scale));
+	BoundingBox bbox = entity.model->localSpaceBBox;
+	glm::mat4 worldM = entity.transform * glm::scale(glm::mat4(1.0f), glm::vec3(entity.scale));
 
 	BoundingBox worldBounds;
 	worldBounds.min = glm::vec3(std::numeric_limits<float>::max());
@@ -179,17 +188,17 @@ void Scene::setupCameraToViewEntity(std::string const& entityName, float distanc
 }
 
 // Implementation for finding entity by name
-Entity* Scene::findEntity(std::string const& name)
+std::optional<std::reference_wrapper<Entity>> Scene::findEntity(std::string const& name)
 {
-	auto it = entityMap_.find(name);
-	if (it != entityMap_.end() && it->second < ents.size()) {
-		return &ents[it->second];
-	}
-	return nullptr;
+	auto it = std::ranges::find_if(ents, [&](Entity const& e) { return e.model && e.model->modelName == name; });
+	if (it == ents.end())
+		return std::nullopt;
+
+	return *it; // implicit conversion to std::reference_wrapper
 }
 
 // Implementation for adding entity with tracking by name
-void Scene::addEntity(std::shared_ptr<Model> model, glm::mat4 const& transform, std::string const& name)
+void Scene::addEntity(std::shared_ptr<Model> model, glm::mat4 const& transform)
 {
 	if (!model)
 		return;
@@ -199,35 +208,14 @@ void Scene::addEntity(std::shared_ptr<Model> model, glm::mat4 const& transform, 
 	entity.model = model;
 	entity.transform = transform;
 
-	// Set name (use auto-generated if empty)
-	entity.name = name.empty() ? "entity_" + std::to_string(ents.size()) : name;
-
 	// Add to entities vector
-	size_t index = ents.size();
 	ents.push_back(entity);
-
-	// Add to name lookup map
-	entityMap_[entity.name] = index;
 }
 
 // Implementation for removing entity
 void Scene::removeEntity(std::string const& name)
 {
-	auto it = entityMap_.find(name);
-	if (it != entityMap_.end() && it->second < ents.size()) {
-		size_t index = it->second;
-
-		// Remove from entities vector
-		ents.erase(ents.begin() + index);
-		entityMap_.erase(it);
-
-		// Update indices in the map
-		for (auto& pair : entityMap_) {
-			if (pair.second > index) {
-				pair.second--;
-			}
-		}
-	}
+	std::erase_if(ents, [&](Entity const& e) { return e.model && e.model->modelName == name; });
 }
 
 // Implementation for adding light
@@ -253,13 +241,6 @@ void Scene::loadSkybox(std::string const& directory)
 // Scene cleanup
 void Scene::cleanup()
 {
-	// Clear all entities (but don't delete models - ModelLoader owns them)
-	ents.clear();
-	entityMap_.clear();
-
-	// Clear lights
-	lights.clear();
-
 	// Clean up skybox if needed
 	if (skyboxVAO_ != 0) {
 		glDeleteVertexArrays(1, &skyboxVAO_);

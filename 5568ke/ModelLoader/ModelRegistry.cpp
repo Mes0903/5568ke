@@ -21,18 +21,23 @@ ModelRegistry& ModelRegistry::getInstance()
 
 // Constructor/Destructor
 ModelRegistry::ModelRegistry() : gltfLoader_(std::make_unique<GltfLoader>()) {}
-ModelRegistry::~ModelRegistry() { cleanup(); }
 
 // Load a model with optional position parameters
 std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::string const& name, glm::vec3 position, glm::vec3 rotation, float scale)
 {
 	// Use provided name or generate one from path
-	std::string modelName = name.empty() ? std::filesystem::path(path).stem().string() : name;
+	// Since most of the model are called scene.gltf, so we used the folder name that contained the model as the default name.
+	std::string modelName = name.empty() ? std::filesystem::path(path).parent_path().stem().string() // Name of parent folder
+																			 : name;
 
 	// Check if model is already loaded
-	auto it = modelCache_.find(modelName);
-	if (it != modelCache_.end()) {
-		return it->second;
+	// Append (1), (2), ... until an unused name is found
+	int suffix = 1;
+
+	int index = 1;
+	std::string baseName = modelName;
+	while (sceneRef.findEntity(modelName)) {
+		modelName = baseName + '(' + std::to_string(suffix++) + ')';
 	}
 
 	// Detect format from file extension
@@ -51,43 +56,15 @@ std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::st
 
 	if (model) {
 		// Cache the model
-		auto result = std::shared_ptr<Model>(model);
-		modelCache_[modelName] = result;
+		model->modelName = modelName;
+		model->updateMatrices();
 
 		std::cout << "[ModelRegistry] Successfully loaded model '" << modelName << "'" << std::endl;
-		return result;
+		return model;
 	}
 
 	std::cout << "[ModelRegistry ERROR] Failed to load model '" << path << "'" << std::endl;
 	return nullptr;
-}
-
-// Get a previously loaded model by name
-std::shared_ptr<Model> ModelRegistry::getModel(std::string const& name)
-{
-	auto it = modelCache_.find(name);
-	if (it != modelCache_.end()) {
-		return it->second;
-	}
-	return nullptr;
-}
-
-// Unload a model by name
-bool ModelRegistry::unloadModel(std::string const& name)
-{
-	auto it = modelCache_.find(name);
-	if (it != modelCache_.end()) {
-		modelCache_.erase(it);
-
-		// Remove from registered models list
-		auto listIt = std::find(registeredModels_.begin(), registeredModels_.end(), name);
-		if (listIt != registeredModels_.end()) {
-			registeredModels_.erase(listIt);
-		}
-
-		return true;
-	}
-	return false;
 }
 
 // Add a model to a scene with a transform matrix
@@ -99,12 +76,7 @@ void ModelRegistry::addModelToScene(Scene& scene, std::shared_ptr<Model> model, 
 	}
 
 	// Add to scene
-	scene.addEntity(model, transform, name);
-
-	// Register model name for UI
-	if (std::find(registeredModels_.begin(), registeredModels_.end(), name) == registeredModels_.end()) {
-		registeredModels_.push_back(name);
-	}
+	scene.addEntity(model, transform);
 
 	std::cout << "[ModelRegistry] Added model '" << name << "' to scene" << std::endl;
 }
@@ -148,22 +120,7 @@ void ModelRegistry::addModelToSceneCentered(Scene& scene, std::shared_ptr<Model>
 }
 
 // Remove a model from a scene
-void ModelRegistry::removeModelFromScene(Scene& scene, std::string const& name)
-{
-	scene.removeEntity(name);
-	// We don't remove from registeredModels_ here since the model is still loaded,
-	// just not in the scene anymore
-}
-
-// Get a list of all registered model names (for UI)
-std::vector<std::string> const& ModelRegistry::getRegisteredModels() const { return registeredModels_; }
-
-// Clean up all models
-void ModelRegistry::cleanup()
-{
-	modelCache_.clear();
-	registeredModels_.clear();
-}
+void ModelRegistry::removeModelFromScene(Scene& scene, std::string const& name) { scene.removeEntity(name); }
 
 // Private method to detect format from file extension
 ModelFormat ModelRegistry::detectFormat_(std::string const& path)

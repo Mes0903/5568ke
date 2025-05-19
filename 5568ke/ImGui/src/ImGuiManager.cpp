@@ -3,6 +3,7 @@
 #include "ImGuiManager.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -11,12 +12,9 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "AnimationClip.hpp"
-#include "GlobalAnimationState.hpp"
+#include "ImGuiFileDialog.h"
 #include "Model.hpp"
-#include "ModelRegistry.hpp"
 #include "Node.hpp"
-#include "Renderer.hpp"
-#include "Scene.hpp"
 
 ImGuiManager& ImGuiManager::getInstance()
 {
@@ -37,8 +35,7 @@ bool ImGuiManager::init(GLFWwindow* window)
 	ImGui_ImplOpenGL3_Init("#version 330 core");
 
 	// Set initial file path to the executable directory
-	currentPath = std::filesystem::current_path().string();
-	refreshFileList();
+	currentPath_ = std::filesystem::current_path().string();
 
 	return true;
 }
@@ -71,61 +68,22 @@ void ImGuiManager::cleanup()
 	ImGui::DestroyContext();
 }
 
-void ImGuiManager::refreshFileList()
+void ImGuiManager::loadSelectedModel_(Scene& scene)
 {
-	fileList.clear();
-
-	try {
-		for (auto const& entry : std::filesystem::directory_iterator(currentPath)) {
-			// Add directories
-			if (entry.is_directory()) {
-				fileList.push_back("[DIR] " + entry.path().filename().string());
-			}
-			// Add model files
-			else {
-				std::string ext = entry.path().extension().string();
-				std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-
-				if (ext == ".gltf" || ext == ".glb" || ext == ".obj" || ext == ".fbx") {
-					fileList.push_back(entry.path().filename().string());
-				}
-			}
-		}
-	} catch (std::exception const& e) {
-		std::cout << "Error reading directory: " << e.what() << std::endl;
-	}
-
-	// Sort file list (directories first)
-	std::sort(fileList.begin(), fileList.end(), [](std::string const& a, std::string const& b) {
-		bool aIsDir = a.find("[DIR]") != std::string::npos;
-		bool bIsDir = b.find("[DIR]") != std::string::npos;
-
-		if (aIsDir && !bIsDir)
-			return true;
-		if (!aIsDir && bIsDir)
-			return false;
-		return a < b;
-	});
-
-	// Add parent directory option
-	fileList.insert(fileList.begin(), "[DIR] ..");
-}
-
-void ImGuiManager::loadSelectedModel(Scene& scene)
-{
-	if (selectedFile.empty() || selectedFile.find("[DIR]") != std::string::npos) {
+	if (selectedFile_.empty()) {
 		return;
 	}
 
 	// Construct full path
-	std::string fullPath = (std::filesystem::path(currentPath) / selectedFile).string();
+	std::string fullPath = (std::filesystem::path(currentPath_) / selectedFile_).string();
 
 	// Use model name or filename if not provided
-	std::string name = modelName.empty() ? std::filesystem::path(selectedFile).stem().string() : modelName;
+	// Since most of the model are called scene.gltf, so we used the folder name that contained the model as the default name.
+	std::string name = loadedModelName_.empty() ? std::filesystem::path(selectedFile_).parent_path().stem().string() // Name of parent folder
+																							: loadedModelName_;
 
 	// Load the model
-	auto& registry = ModelRegistry::getInstance();
-	std::shared_ptr<Model> model = registry.loadModel(fullPath, name);
+	std::shared_ptr<Model> model = registryRef.loadModel(fullPath, name);
 
 	if (model) {
 		// Create transformation matrix
@@ -135,29 +93,29 @@ void ImGuiManager::loadSelectedModel(Scene& scene)
 		transform = glm::scale(transform, glm::vec3(1.0f));
 
 		// Apply rotations in XYZ order
-		transform = glm::rotate(transform, modelRotation[0], glm::vec3(1.0f, 0.0f, 0.0f));
-		transform = glm::rotate(transform, modelRotation[1], glm::vec3(0.0f, 1.0f, 0.0f));
-		transform = glm::rotate(transform, modelRotation[2], glm::vec3(0.0f, 0.0f, 1.0f));
+		transform = glm::rotate(transform, loadedModelRotation_[0], glm::vec3(1.0f, 0.0f, 0.0f));
+		transform = glm::rotate(transform, loadedModelRotation_[1], glm::vec3(0.0f, 1.0f, 0.0f));
+		transform = glm::rotate(transform, loadedModelRotation_[2], glm::vec3(0.0f, 0.0f, 1.0f));
 
 		// Apply translation
-		transform = glm::translate(transform, glm::vec3(modelPosition[0], modelPosition[1], modelPosition[2]));
+		transform = glm::translate(transform, glm::vec3(loadedModelPosition_[0], loadedModelPosition_[1], loadedModelPosition_[2]));
 
 		// Add to scene
-		registry.addModelToScene(scene, model, name, transform);
+		registryRef.addModelToScene(scene, model, name, transform);
 
 		std::cout << "Model '" << name << "' loaded successfully from " << fullPath << std::endl;
 
 		// Reset input fields
-		modelName = "";
-		modelRotation[0] = modelRotation[1] = modelRotation[2] = 0.0f;
-		modelPosition[0] = modelPosition[1] = modelPosition[2] = 0.0f;
+		loadedModelName_.clear();
+		loadedModelRotation_[0] = loadedModelRotation_[1] = loadedModelRotation_[2] = 0.0f;
+		loadedModelPosition_[0] = loadedModelPosition_[1] = loadedModelPosition_[2] = 0.0f;
 	}
 	else {
 		std::cout << "Failed to load model from " << fullPath << std::endl;
 	}
 }
 
-void ImGuiManager::drawTransformEditor(Entity& entity)
+void ImGuiManager::drawTransformEditor_(Entity& entity)
 {
 	// Display and edit scale
 	ImGui::Text("Model Scaling:");
@@ -171,7 +129,43 @@ void ImGuiManager::drawTransformEditor(Entity& entity)
 	}
 }
 
-void ImGuiManager::drawModelLoaderInterface(Scene& scene) {}
+void ImGuiManager::drawModelLoaderInterface(Scene& scene)
+{
+	ImGui::Begin("Model Loader");
+
+	if (ImGui::Button("Select Model")) {
+		IGFD::FileDialogConfig config;
+		config.path = currentPath_;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseModelDlg", "Choose Model", ".gltf,.glb", config);
+	}
+
+	if (ImGuiFileDialog::Instance()->Display("ChooseModelDlg")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) {
+			selectedFile_ = ImGuiFileDialog::Instance()->GetFilePathName();
+			currentPath_ = ImGuiFileDialog::Instance()->GetCurrentPath();
+		}
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	if (!selectedFile_.empty()) {
+		ImGui::Text("Selected: %s", selectedFile_.c_str());
+	}
+
+	char nameBuffer[128];
+	std::strncpy(nameBuffer, loadedModelName_.c_str(), sizeof(nameBuffer));
+	nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+	if (ImGui::InputText("Model Name", nameBuffer, IM_ARRAYSIZE(nameBuffer))) {
+		loadedModelName_ = nameBuffer;
+	}
+	ImGui::InputFloat3("Position", loadedModelPosition_.data());
+	ImGui::InputFloat3("Rotation", loadedModelRotation_.data());
+
+	if (ImGui::Button("Load Model") && !selectedFile_.empty()) {
+		loadSelectedModel_(scene);
+	}
+
+	ImGui::End();
+}
 
 void ImGuiManager::drawSceneEntityManager(Scene& scene)
 {
@@ -183,20 +177,20 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 
 	for (size_t i = 0; i < scene.ents.size(); i++) {
 		auto const& entity = scene.ents[i];
-		bool isSelected = (selectedEntityIndex == static_cast<int>(i));
+		bool isSelected = (selectedEntityIndex_ == static_cast<int>(i));
 
-		if (ImGui::Selectable(entity.name.c_str(), isSelected)) {
-			selectedEntityIndex = static_cast<int>(i);
+		if (ImGui::Selectable(entity.model->modelName.c_str(), isSelected)) {
+			selectedEntityIndex_ = static_cast<int>(i);
 		}
 	}
 	ImGui::EndChild();
 	ImGui::Separator();
 
 	// Entity controls (only show if an entity is selected)
-	if (selectedEntityIndex >= 0 && selectedEntityIndex < static_cast<int>(scene.ents.size())) {
-		Entity& entity = scene.ents[selectedEntityIndex];
+	if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < static_cast<int>(scene.ents.size())) {
+		Entity& entity = scene.ents[selectedEntityIndex_];
 
-		ImGui::Text("Entity: %s", entity.name.c_str());
+		ImGui::Text("Entity: %s", entity.model->modelName.c_str());
 
 		// Visibility toggle
 		bool visible = entity.visible;
@@ -206,20 +200,20 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 
 		// Transform editor
 		if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-			drawTransformEditor(entity);
+			drawTransformEditor_(entity);
 		}
 
 		// Remove entity button
 		if (ImGui::Button("Remove Entity")) {
-			ModelRegistry::getInstance().removeModelFromScene(scene, entity.name);
-			selectedEntityIndex = -1; // Reset selection
+			registryRef.removeModelFromScene(scene, entity.model->modelName);
+			selectedEntityIndex_ = -1; // Reset selection
 		}
 	}
 
 	ImGui::Separator();
 	// Show bone hierarchy
-	if (selectedEntityIndex >= 0 && selectedEntityIndex < static_cast<int>(scene.ents.size()) && ImGui::CollapsingHeader("Bone Hierarchy")) {
-		Entity& entity = scene.ents[selectedEntityIndex];
+	if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < static_cast<int>(scene.ents.size()) && ImGui::CollapsingHeader("Bone Hierarchy")) {
+		Entity& entity = scene.ents[selectedEntityIndex_];
 		if (entity.model->rootNode) {
 			// Debug info about the node count
 			ImGui::Text("Model has %zu nodes", entity.model->nodes.size());
@@ -229,7 +223,7 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 			ImGui::Text("Root node ID: %d, Name: %s", rootNode->nodeNum, rootNode->nodeName.empty() ? "<unnamed>" : rootNode->nodeName.c_str());
 
 			// Show full hierarchy starting at root
-			drawNodeTree(rootNode, 0);
+			drawNodeTree_(rootNode, 0);
 
 			// If root node doesn't have all nodes as descendants,
 			// find potential other top-level nodes
@@ -259,7 +253,7 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 					}
 
 					// Show each disconnected node
-					drawNodeTree(entity.model->nodes[i], 0);
+					drawNodeTree_(entity.model->nodes[i], 0);
 				}
 			}
 		}
@@ -273,15 +267,13 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 
 void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 {
-	auto& animState = GlobalAnimationState::getInstance();
-
 	ImGui::Begin("Animation Controls");
 
 	// Find entities with animations
 	std::vector<std::string> entitiesWithAnimations;
 	for (auto const& ent : scene.ents) {
 		if (ent.model && !ent.model->animations.empty()) {
-			entitiesWithAnimations.push_back(ent.name);
+			entitiesWithAnimations.push_back(ent.model->modelName);
 		}
 	}
 
@@ -292,45 +284,46 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 	}
 
 	// Entity selection
-	static int selectedEntityIndex = 0;
-	if (selectedEntityIndex >= entitiesWithAnimations.size()) {
-		selectedEntityIndex = 0;
-	}
+	static int selectedEntityIndex_ = 0;
+	if (selectedEntityIndex_ >= entitiesWithAnimations.size())
+		selectedEntityIndex_ = 0;
 
-	if (ImGui::BeginCombo("Entity", entitiesWithAnimations[selectedEntityIndex].c_str())) {
+	if (ImGui::BeginCombo("Entity", entitiesWithAnimations[selectedEntityIndex_].c_str())) {
 		for (int i = 0; i < entitiesWithAnimations.size(); i++) {
-			bool isSelected = (selectedEntityIndex == i);
-			if (ImGui::Selectable(entitiesWithAnimations[i].c_str(), isSelected)) {
-				selectedEntityIndex = i;
-			}
-			if (isSelected) {
+			bool isSelected = (selectedEntityIndex_ == i);
+			if (ImGui::Selectable(entitiesWithAnimations[i].c_str(), isSelected))
+				selectedEntityIndex_ = i;
+
+			if (isSelected)
 				ImGui::SetItemDefaultFocus();
-			}
 		}
 		ImGui::EndCombo();
 	}
 
-	std::string entityName = entitiesWithAnimations[selectedEntityIndex];
-	Entity* entity = scene.findEntity(entityName);
-
-	if (!entity || !entity->model) {
+	std::string entityName = entitiesWithAnimations[selectedEntityIndex_];
+	auto entOpt = sceneRef.findEntity(animStateRef.entityName);
+	if (!entOpt) {
 		ImGui::End();
 		return;
 	}
 
-	// Display debug info
-	ImGui::Text("Model has %zu animations", entity->model->animations.size());
+	Entity& entity = entOpt->get();
+	auto model = entity.model;
+	if (!entity.model) {
+		ImGui::End();
+		return;
+	}
+
+	ImGui::Text("Model has %zu animations", entity.model->animations.size());
 
 	// Animation clips
 	std::vector<std::string> clipNames;
-	for (auto const& clip : entity->model->animations) {
+	for (auto const& clip : entity.model->animations)
 		clipNames.push_back(clip->clipName);
-	}
 
 	static int selectedClipIndex = 0;
-	if (selectedClipIndex >= clipNames.size()) {
+	if (selectedClipIndex >= clipNames.size())
 		selectedClipIndex = 0;
-	}
 
 	if (ImGui::BeginCombo("Animation", clipNames.empty() ? "None" : clipNames[selectedClipIndex].c_str())) {
 		for (int i = 0; i < clipNames.size(); i++) {
@@ -339,12 +332,12 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 				selectedClipIndex = i;
 
 				// Update global animation state
-				animState.clipIndex = selectedClipIndex;
+				animStateRef.clipIndex = selectedClipIndex;
 
 				// Reset animation visually
-				if (entity->model->animations.size() > selectedClipIndex) {
-					entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, 0.0f);
-					entity->model->updateMatrices();
+				if (model->animations.size() > selectedClipIndex) {
+					model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, 0.0f);
+					model->updateMatrices();
 				}
 			}
 			if (isSelected) {
@@ -361,30 +354,30 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	// Speed control
 	{
-		float speed = animState.getAnimateSpeed();
+		float speed = animStateRef.getAnimateSpeed();
 		if (ImGui::SliderFloat("Speed", &speed, 0.1f, 2.0f)) {
-			animState.setAnimateSpeed(speed);
+			animStateRef.setAnimateSpeed(speed);
 		}
 	}
 
 	// Get duration
 	float duration = 0.0f;
-	if (entity->model->animations.size() > selectedClipIndex) {
-		duration = entity->model->animations[selectedClipIndex]->getDuration();
+	if (model->animations.size() > selectedClipIndex) {
+		duration = model->animations[selectedClipIndex]->getDuration();
 	}
 
 	// Time slider
 	if (duration > 0.0f) {
-		float currentTime = animState.entityName == entityName ? animState.currentTime : 0.0f;
+		float currentTime = animStateRef.entityName == entityName ? animStateRef.currentTime : 0.0f;
 
 		if (ImGui::SliderFloat("Time", &currentTime, 0.0f, duration)) {
 			// Set animation time for preview
-			animState.currentTime = currentTime;
+			animStateRef.currentTime = currentTime;
 
 			// Update animation frame if this is the current entity
-			if (entity->model->animations.size() > selectedClipIndex) {
-				entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, currentTime);
-				entity->model->updateMatrices();
+			if (model->animations.size() > selectedClipIndex) {
+				model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, currentTime);
+				model->updateMatrices();
 			}
 		}
 	}
@@ -396,55 +389,55 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		std::cout << "[ImGui] Play button pressed for " << entityName << ", clip " << selectedClipIndex << std::endl;
 
 		// Start animation
-		animState.play(entityName, selectedClipIndex);
+		animStateRef.play(entityName, selectedClipIndex);
 
 		// Apply initial frame for visual feedback
-		if (entity->model->animations.size() > selectedClipIndex) {
-			entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, 0.0f);
-			entity->model->updateMatrices();
+		if (model->animations.size() > selectedClipIndex) {
+			model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, 0.0f);
+			model->updateMatrices();
 		}
 	}
 	ImGui::SameLine();
 
 	if (ImGui::Button("Pause", ImVec2(60, 30))) {
 		std::cout << "[ImGui] Pause button pressed" << std::endl;
-		animState.pause();
+		animStateRef.pause();
 	}
 	ImGui::SameLine();
 
 	if (ImGui::Button("Resume", ImVec2(70, 30))) {
 		std::cout << "[ImGui] Resume button pressed" << std::endl;
 
-		if (animState.entityName != entityName || animState.clipIndex != selectedClipIndex) {
+		if (animStateRef.entityName != entityName || animStateRef.clipIndex != selectedClipIndex) {
 			// If different entity/clip, start animation
-			animState.play(entityName, selectedClipIndex, animState.currentTime);
+			animStateRef.play(entityName, selectedClipIndex, animStateRef.currentTime);
 		}
 		else {
 			// Otherwise just resume
-			animState.resume();
+			animStateRef.resume();
 		}
 	}
 	ImGui::SameLine();
 
 	if (ImGui::Button("Stop", ImVec2(60, 30))) {
 		std::cout << "[ImGui] Stop button pressed" << std::endl;
-		animState.stop();
+		animStateRef.stop();
 
 		// Reset visually
-		if (entity->model->animations.size() > selectedClipIndex) {
-			entity->model->animations[selectedClipIndex]->setAnimationFrame(entity->model->nodes, 0.0f);
-			entity->model->updateMatrices();
+		if (model->animations.size() > selectedClipIndex) {
+			model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, 0.0f);
+			model->updateMatrices();
 		}
 	}
 
 	// Animation state display
-	ImGui::Text("Animation State: %s", animState.isAnimating && animState.entityName == entityName ? "Playing" : "Stopped");
+	ImGui::Text("Animation State: %s", animStateRef.isAnimating && animStateRef.entityName == entityName ? "Playing" : "Stopped");
 
-	if (animState.isAnimating && animState.entityName == entityName) {
-		ImGui::Text("Current Time: %.2f / %.2f", animState.currentTime, duration);
+	if (animStateRef.isAnimating && animStateRef.entityName == entityName) {
+		ImGui::Text("Current Time: %.2f / %.2f", animStateRef.currentTime, duration);
 
 		// Progress bar
-		float progress = duration > 0.0f ? (animState.currentTime / duration) : 0.0f;
+		float progress = duration > 0.0f ? (animStateRef.currentTime / duration) : 0.0f;
 		std::string progressStr = std::to_string(static_cast<int>(progress * 100)) + "%";
 		ImGui::ProgressBar(progress, ImVec2(-1, 0), progressStr.c_str());
 	}
@@ -453,7 +446,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 }
 
 // Implement the node hierarchy display function
-void ImGuiManager::drawNodeTree(std::shared_ptr<Node> node, int depth)
+void ImGuiManager::drawNodeTree_(std::shared_ptr<Node> node, int depth)
 {
 	if (!node) {
 		return;
@@ -513,7 +506,7 @@ void ImGuiManager::drawNodeTree(std::shared_ptr<Node> node, int depth)
 
 		// Process all children
 		for (auto const& child : node->children) {
-			drawNodeTree(child, depth + 1);
+			drawNodeTree_(child, depth + 1);
 		}
 
 		ImGui::Unindent();
@@ -530,10 +523,8 @@ void ImGuiManager::drawStatusWindow(Scene& scene)
 	ImGui::Text("F1-F4 to toggle UI windows");
 
 	// Show animation state if active
-	auto& animState = GlobalAnimationState::getInstance();
-	if (animState.isAnimating) {
-		ImGui::Text("Animating: %s (clip %d, time %.2f)", animState.entityName.c_str(), animState.clipIndex, animState.currentTime);
-	}
+	if (animStateRef.isAnimating)
+		ImGui::Text("Animating: %s (clip %d, time %.2f)", animStateRef.entityName.c_str(), animStateRef.clipIndex, animStateRef.currentTime);
 
 	ImGui::End();
 }
@@ -544,10 +535,9 @@ void ImGuiManager::drawSceneControlWindow(Scene& scene)
 
 	// Skeleton visualization controls
 	ImGui::Text("Visualization Options:");
-	auto& renderer = Renderer::getInstance();
-	bool& showSkeletons = renderer.showSkeletons;
-	bool& showModels = renderer.showModels;
-	bool& showWireFrame = renderer.showWireFrame;
+	bool& showSkeletons = rendererRef.showSkeletons;
+	bool& showModels = rendererRef.showModels;
+	bool& showWireFrame = rendererRef.showWireFrame;
 
 	if (ImGui::Checkbox("Show Skeleton", &showSkeletons)) {
 		std::cout << "[ImGui INFO] Setting skeleton visibility to: " << (showSkeletons ? "ON" : "OFF") << std::endl;
@@ -572,7 +562,7 @@ void ImGuiManager::drawSceneControlWindow(Scene& scene)
 		}
 
 		// Camera speed
-		float& camSpeed = GlobalAnimationState::getInstance().camSpeed;
+		float& camSpeed = animStateRef.camSpeed;
 		ImGui::SliderFloat("Camera Speed", &camSpeed, 0.5f, 10.0f);
 
 		// Camera direction (read-only)
@@ -586,9 +576,8 @@ void ImGuiManager::drawSceneControlWindow(Scene& scene)
 		ImGui::SameLine();
 
 		if (ImGui::Button("View Selected Entity")) {
-			auto& entityManager = ImGuiManager::getInstance();
-			if (entityManager.selectedEntityIndex >= 0 && entityManager.selectedEntityIndex < scene.ents.size()) {
-				scene.setupCameraToViewEntity(scene.ents[entityManager.selectedEntityIndex].name);
+			if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < scene.ents.size()) {
+				scene.setupCameraToViewEntity(scene.ents[selectedEntityIndex_].model->modelName);
 			}
 		}
 	}

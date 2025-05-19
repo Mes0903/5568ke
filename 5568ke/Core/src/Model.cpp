@@ -78,10 +78,3 @@ void Model::updateMatrices()
 	NodeUtil::updateNodeListJointMatrices(*this);
 	BBoxUtil::updateLocalBBox(*this);
 }
-
-void Model::initializeDefaultPose()
-{
-	updateMatrices();
-
-	std::cout << "[Model] Initialized default pose with " << jointMatrices.size() << " joint matrices" << std::endl;
-}

@@ -9,6 +9,10 @@
 #include <string>
 #include <vector>
 
+#include "GlobalAnimationState.hpp"
+#include "ModelRegistry.hpp"
+#include "Renderer.hpp"
+#include "Scene.hpp"
 #include "include_5568ke.hpp"
 
 class Node;
@@ -30,26 +34,30 @@ public:
 	void drawAnimationControlPanel(Scene& scene); // Animation UI and skeleton control
 	void drawSceneControlWindow(Scene& scene);
 
+public:
+	Scene& sceneRef = Scene::getInstance();
+	ModelRegistry& registryRef = ModelRegistry::getInstance();
+	Renderer& rendererRef = Renderer::getInstance();
+	GlobalAnimationState& animStateRef = GlobalAnimationState::getInstance();
+
 private:
 	ImGuiManager() = default;
 	~ImGuiManager() = default;
 
 	// File browser state
-	std::string currentPath;
-	std::string selectedFile;
-	std::vector<std::string> fileList;
+	std::string currentPath_;
+	std::string selectedFile_;
 
 	// Model loading state
-	std::string modelName;
-	std::array<float, 3> modelRotation{};
-	std::array<float, 3> modelPosition{};
+	std::string loadedModelName_;
+	std::array<float, 3> loadedModelRotation_{};
+	std::array<float, 3> loadedModelPosition_{};
 
 	// Scene management state
-	int selectedEntityIndex{-1};
+	int selectedEntityIndex_{-1};
 
 	// Utility functions
-	void refreshFileList();
-	void loadSelectedModel(Scene& scene);
-	void drawTransformEditor(Entity& entity);
-	void drawNodeTree(std::shared_ptr<Node> node, int depth);
+	void loadSelectedModel_(Scene& scene);
+	void drawTransformEditor_(Entity& entity);
+	void drawNodeTree_(std::shared_ptr<Node> node, int depth);
 };

@@ -15,7 +15,7 @@ struct Entity;
 
 class BoundingBoxVisualizer {
 public:
-	static BoundingBoxVisualizer& get();
+	static BoundingBoxVisualizer& getInstance();
 
 	void init();		// create VAO / VBO
 	void cleanup(); // destroy GL objects

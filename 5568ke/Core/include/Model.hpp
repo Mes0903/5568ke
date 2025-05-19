@@ -18,16 +18,10 @@ class Model {
 public:
 	Model() = default;
 	~Model();
-
-	// Methods for drawing
-	void draw(Shader const& shader, glm::mat4 const& modelMatrix) const;
-
-	// Cleanup resources
 	void cleanup();
 
-	// Animation helper methods
+	void draw(Shader const& shader, glm::mat4 const& modelMatrix) const;
 	void updateMatrices();
-	void initializeDefaultPose();
 
 public:
 	// Core model data
@@ -37,8 +31,7 @@ public:
 	BoundingBox localSpaceBBox;
 
 	// Metadata
-	std::string name;
-	std::string filePath;
+	std::string modelName;
 
 	// Animation support
 	std::vector<std::shared_ptr<AnimationClip>> animations;

@@ -4,6 +4,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "GlobalAnimationState.hpp"
+#include "ImGuiManager.hpp"
+#include "ModelRegistry.hpp"
+#include "Renderer.hpp"
 #include "Scene.hpp"
 #include "include_5568ke.hpp"
 
@@ -13,6 +17,12 @@ public:
 	~Application();
 
 	int run();
+
+	Scene& sceneRef = Scene::getInstance();
+	ImGuiManager& ImGuiManagerRef = ImGuiManager::getInstance();
+	ModelRegistry& registryRef = ModelRegistry::getInstance();
+	Renderer& rendererRef = Renderer::getInstance();
+	GlobalAnimationState& animStateRef = GlobalAnimationState::getInstance();
 
 private:
 	// Initialization methods
@@ -36,7 +46,6 @@ private:
 
 private:
 	GLFWwindow* window_{nullptr};
-	Scene scene_;
 	double prevTime_{0.0};
 
 	// ImGui management
