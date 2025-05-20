@@ -4,14 +4,17 @@
 #include "Shader.hpp"
 #include "include_5568ke.hpp"
 
-LightVisualizer& LightVisualizer::getInstance()
+LightPointVisualizer& LightPointVisualizer::getInstance()
 {
-	static LightVisualizer viz;
+	static LightPointVisualizer viz;
 	return viz;
 }
 
-void LightVisualizer::init()
+void LightPointVisualizer::init()
 {
+	lightPointShader = std::make_unique<Shader>();
+	lightPointShader->resetShaderPath("assets/shaders/point.vert", "assets/shaders/point.frag");
+
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glGenVertexArrays(1, &vao_);
 	glGenBuffers(1, &vbo_);
@@ -23,7 +26,7 @@ void LightVisualizer::init()
 	glBindVertexArray(0);
 }
 
-void LightVisualizer::cleanup()
+void LightPointVisualizer::cleanup()
 {
 	if (vbo_)
 		glDeleteBuffers(1, &vbo_);
@@ -31,9 +34,9 @@ void LightVisualizer::cleanup()
 		glDeleteVertexArrays(1, &vao_);
 }
 
-void LightVisualizer::drawLights(Scene const& scene, glm::mat4 const& view, glm::mat4 const& proj, std::shared_ptr<Shader> shader)
+void LightPointVisualizer::draw(Scene const& scene)
 {
-	if (!shader || scene.lights.empty())
+	if (!lightPointShader || scene.lights.empty())
 		return;
 
 	std::vector<glm::vec3> pts;
@@ -44,10 +47,10 @@ void LightVisualizer::drawLights(Scene const& scene, glm::mat4 const& view, glm:
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 	glBufferData(GL_ARRAY_BUFFER, pts.size() * sizeof(glm::vec3), pts.data(), GL_DYNAMIC_DRAW);
 
-	shader->bind();
-	shader->sendMat4("view", view);
-	shader->sendMat4("proj", proj);
-	shader->sendFloat("pointSize", 50.0f); // see shader below
+	lightPointShader->bind();
+	lightPointShader->sendMat4("view", scene.cam.view);
+	lightPointShader->sendMat4("proj", scene.cam.proj);
+	lightPointShader->sendFloat("pointSize", 50.0f); // see lightPointShader below
 
 	// disable depth just like skeleton (so gizmos are always visible)
 	GLboolean depth;

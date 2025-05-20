@@ -142,7 +142,7 @@ void Application::setupDefaultScene_()
 		}
 
 		// Initialize renderer
-		rendererRef.setupDefaultRenderer();
+		rendererRef.init();
 
 	} catch (std::runtime_error const& error) {
 		std::cout << error.what() << std::endl;
@@ -151,12 +151,6 @@ void Application::setupDefaultScene_()
 
 void Application::processInput_(float dt)
 {
-	static bool isAnimating = false;
-	static std::string currentAnimatingEntity;
-	static int currentAnimationClip = 0;
-	static float currentAnimationTime = 0.0f;
-	static float animationSpeed = 1.0f;
-
 	// Only process keyboard input for camera if cursor is disabled
 	int cursorMode = glfwGetInputMode(window_, GLFW_CURSOR);
 	if (cursorMode == GLFW_CURSOR_DISABLED) {
@@ -216,8 +210,6 @@ void Application::tick_(float dt)
 {
 	// Process input (keyboard, mouse)
 	processInput_(dt);
-
-	// Get global animation state
 
 	// Update animation state
 	if (animStateRef.isAnimating && !animStateRef.entityName.empty()) {

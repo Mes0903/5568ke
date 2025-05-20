@@ -11,15 +11,14 @@
 class Shader;
 class Scene;
 class Model;
-struct Entity;
+class Entity;
 
 class BoundingBoxVisualizer {
 public:
 	static BoundingBoxVisualizer& getInstance();
-
 	void init();		// create VAO / VBO
 	void cleanup(); // destroy GL objects
-	void draw(Scene const& scene, glm::mat4 const& view, glm::mat4 const& proj);
+	void draw(Scene const& scene);
 
 	std::shared_ptr<Shader> boxShader;
 

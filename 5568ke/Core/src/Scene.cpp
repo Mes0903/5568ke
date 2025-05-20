@@ -224,36 +224,6 @@ void Scene::addLight(glm::vec3 const& position, glm::vec3 const& color, float in
 	lights.push_back(std::move(light));
 }
 
-// Skybox implementation
-void Scene::loadSkybox(std::string const& directory)
-{
-	// TODO: This should load 6 textures for a skybox. For now, just setting a flag
-	hasSkybox_ = false;
-
-	std::cout << "[Scene] Loading skybox from: " << directory << std::endl;
-	// Actual implementation would load the 6 faces and set up the skybox texture
-}
-
 // Scene cleanup
-void Scene::cleanup()
-{
-	// Clean up skybox if needed
-	if (skyboxVAO_ != 0) {
-		glDeleteVertexArrays(1, &skyboxVAO_);
-		skyboxVAO_ = 0;
-	}
-
-	if (skyboxVBO_ != 0) {
-		glDeleteBuffers(1, &skyboxVBO_);
-		skyboxVBO_ = 0;
-	}
-
-	if (skyboxTexture_ != 0) {
-		glDeleteTextures(1, &skyboxTexture_);
-		skyboxTexture_ = 0;
-	}
-
-	hasSkybox_ = false;
-}
-
+void Scene::cleanup() {}
 Scene::~Scene() { cleanup(); }

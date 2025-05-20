@@ -24,7 +24,8 @@ struct Light {
 	bool castsShadows{false};
 };
 
-struct Entity {
+class Entity {
+public:
 	std::shared_ptr<Model> model;
 	glm::vec3 position{0.0f};
 	glm::vec3 rotationDeg{0.0f}; // degree
@@ -91,8 +92,9 @@ public:
 	// Position the camera to view a specific entity
 	void setupCameraToViewEntity(std::string const& entityName, float padding = 1.2f);
 
-	// Load a skybox
-	void loadSkybox(std::string const& directory);
+	// Skybox usage
+	bool hasSkybox{false};
+	std::string skyboxPath;
 
 	// Cleanup resources
 	void cleanup();
@@ -100,10 +102,4 @@ public:
 private:
 	Scene() = default;
 	~Scene();
-
-	// Skybox resources
-	unsigned int skyboxVAO_{0};
-	unsigned int skyboxVBO_{0};
-	unsigned int skyboxTexture_{0};
-	bool hasSkybox_{false};
 };

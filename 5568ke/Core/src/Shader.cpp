@@ -36,7 +36,7 @@ std::string loadFile(std::string const& path)
 }
 } // namespace
 
-void Shader::resetShader(std::string const& v, std::string const& f)
+void Shader::resetShaderPath(std::string const& v, std::string const& f)
 {
 	vsPath_ = v;
 	fsPath_ = f;

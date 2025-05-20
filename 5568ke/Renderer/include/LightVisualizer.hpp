@@ -10,14 +10,16 @@
 class Shader;
 class Scene;
 
-class LightVisualizer {
+class LightPointVisualizer {
 public:
-	static LightVisualizer& getInstance(); // singleton
+	static LightPointVisualizer& getInstance();
 	void init();
 	void cleanup();
-	void drawLights(Scene const& scene, glm::mat4 const& view, glm::mat4 const& proj, std::shared_ptr<Shader> lineShader);
+	void draw(Scene const& scene);
+
+	std::shared_ptr<Shader> lightPointShader;
 
 private:
 	GLuint vao_{0}, vbo_{0};
-	LightVisualizer() = default;
+	LightPointVisualizer() = default;
 };

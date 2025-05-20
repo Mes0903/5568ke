@@ -7,7 +7,7 @@
 
 class Shader {
 public:
-	void resetShader(std::string const& vertPath, std::string const& fragPath);
+	void resetShaderPath(std::string const& vertPath, std::string const& fragPath);
 	void reload();
 	void bind() const;
 	void unbind() const;

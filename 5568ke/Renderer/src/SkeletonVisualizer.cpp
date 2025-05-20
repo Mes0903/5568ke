@@ -7,6 +7,7 @@
 #include "Model.hpp"
 #include "Node.hpp"
 #include "Renderer.hpp"
+#include "Scene.hpp"
 #include "Shader.hpp"
 
 SkeletonVisualizer& SkeletonVisualizer::getInstance()
@@ -17,6 +18,10 @@ SkeletonVisualizer& SkeletonVisualizer::getInstance()
 
 void SkeletonVisualizer::init()
 {
+	// Create line shader for debug visualization
+	skeletonShader = std::make_unique<Shader>();
+	skeletonShader->resetShaderPath("assets/shaders/skeleton.vert", "assets/shaders/skeleton.frag");
+
 	// Create OpenGL resources
 	glGenVertexArrays(1, &vao_);
 	glGenBuffers(1, &vbo_);
@@ -168,14 +173,17 @@ void SkeletonVisualizer::processNodeTreePositionsRecursive(std::shared_ptr<Node>
 	}
 }
 
-void SkeletonVisualizer::drawDebugLines(std::shared_ptr<Model> model, glm::mat4 const& modelMatrix, std::shared_ptr<Shader> lineShader)
+void SkeletonVisualizer::draw(Entity const& entity, Camera const& cam)
 {
-	if (!model || !lineShader) {
+	auto model = entity.model;
+
+	if (!model || !skeletonShader) {
+		std::cout << "[SkeletonVisualizer ERROR] Model or skeleton shader is null!" << std::endl;
 		return;
 	}
 
 	// Clear the cached skeleton data for this model to regenerate it with new parameters
-	auto it = skeletonCache.find(model);
+	auto it = skeletonCache.find(entity.model);
 	if (it != skeletonCache.end()) {
 		skeletonCache.erase(it);
 	}
@@ -214,12 +222,11 @@ void SkeletonVisualizer::drawDebugLines(std::shared_ptr<Model> model, glm::mat4 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 	glBufferData(GL_ARRAY_BUFFER, interleavedData.size() * sizeof(glm::vec3), interleavedData.data(), GL_DYNAMIC_DRAW);
 
-	// Create a transform matrix that includes the model's global scale
-	glm::mat4 skeletonMatrix = modelMatrix;
-
 	// Bind shader and set uniforms
-	lineShader->bind();
-	lineShader->sendMat4("model", skeletonMatrix);
+	skeletonShader->bind();
+	skeletonShader->sendMat4("view", cam.view);
+	skeletonShader->sendMat4("proj", cam.proj);
+	skeletonShader->sendMat4("model", entity.transform);
 
 	// Draw lines with wider lines for better visibility
 	glLineWidth(3.0f); // Make lines thicker

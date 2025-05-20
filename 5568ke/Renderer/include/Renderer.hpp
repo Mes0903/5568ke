@@ -10,6 +10,7 @@
 #include "BoundingBoxVisualizer.hpp"
 #include "LightVisualizer.hpp"
 #include "SkeletonVisualizer.hpp"
+#include "SkyboxVisualizer.hpp"
 
 class Scene;
 class Shader;
@@ -17,22 +18,27 @@ class Shader;
 class Renderer {
 public:
 	static Renderer& getInstance();
-
-	void setupDefaultRenderer();
-	void beginFrame(int w, int h, glm::vec3 const& clear);
-	void drawScene(Scene const& scene);
-	void endFrame();
-
+	void init();
 	void cleanup();
 
-	// Flag to control skeleton visualization
-	bool showSkeletons{true};
+	void beginFrame(int w, int h, glm::vec3 const& clear);
+	void endFrame();
+	void drawScene(Scene const& scene);
+
+	// Flag to control main visualization
 	bool showModels{true};
 	bool showWireFrame{false};
 
+	// Flag to control call visualizer
+	bool showSkybox{true};
+	bool showSkeletons{true};
+	bool showLightPoint{true};
+	bool showBBox{true};
+
 	SkeletonVisualizer& skeletonVisualizerRef = SkeletonVisualizer::getInstance();
-	LightVisualizer& lightVisualizerRef = LightVisualizer::getInstance();
+	LightPointVisualizer& lightVisualizerRef = LightPointVisualizer::getInstance();
 	BoundingBoxVisualizer& boundingBoxVisualizerRef = BoundingBoxVisualizer::getInstance();
+	SkyboxVisualizer& skyboxVisualizerRef = SkyboxVisualizer::getInstance();
 
 private:
 	Renderer() = default;
@@ -42,10 +48,7 @@ private:
 	// Different shaders for different rendering techniques
 	std::unordered_map<std::string, std::shared_ptr<Shader>> shaders_;
 	std::shared_ptr<Shader> mainShader_;
-	std::shared_ptr<Shader> skyboxShader_;
 	std::shared_ptr<Shader> skinnedShader_;
-	std::shared_ptr<Shader> lineShader_;
-	std::shared_ptr<Shader> lightPointShader_;
 
 	// Helper methods for different rendering passes
 	void drawModels_(Scene const& scene);

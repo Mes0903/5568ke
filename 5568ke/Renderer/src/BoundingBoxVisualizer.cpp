@@ -14,7 +14,7 @@ BoundingBoxVisualizer& BoundingBoxVisualizer::getInstance()
 void BoundingBoxVisualizer::init()
 {
 	boxShader = std::make_shared<Shader>();
-	boxShader->resetShader("assets/shaders/boundingBox.vert", "assets/shaders/boundingBox.frag");
+	boxShader->resetShaderPath("assets/shaders/boundingBox.vert", "assets/shaders/boundingBox.frag");
 
 	glGenVertexArrays(1, &vao_);
 	glGenBuffers(1, &vbo_);
@@ -68,7 +68,7 @@ static void buildBoxLines(glm::vec3 const& min, glm::vec3 const& max, std::vecto
 	push(v010, v110); // connect
 }
 
-void BoundingBoxVisualizer::draw(Scene const& scene, glm::mat4 const& view, glm::mat4 const& proj)
+void BoundingBoxVisualizer::draw(Scene const& scene)
 {
 	if (!boxShader)
 		return;
@@ -104,8 +104,8 @@ void BoundingBoxVisualizer::draw(Scene const& scene, glm::mat4 const& view, glm:
 
 	// simple colour – bright magenta
 	boxShader->bind();
-	boxShader->sendMat4("view", view);
-	boxShader->sendMat4("proj", proj);
+	boxShader->sendMat4("view", scene.cam.view);
+	boxShader->sendMat4("proj", scene.cam.proj);
 	boxShader->sendMat4("model", glm::mat4(1.0f));
 	boxShader->sendVec3("uColor", glm::vec3(1, 1, 1));
 

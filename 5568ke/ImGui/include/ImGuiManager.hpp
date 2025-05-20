@@ -17,7 +17,7 @@
 
 class Node;
 class Scene;
-struct Entity;
+class Entity;
 
 class ImGuiManager {
 public:

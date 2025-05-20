@@ -17,42 +17,39 @@ Renderer& Renderer::getInstance()
 	return instance;
 }
 
-void Renderer::setupDefaultRenderer()
+void Renderer::init()
 {
 	// Create default shaders
 	auto blinnPhongShader = std::make_unique<Shader>();
-	blinnPhongShader->resetShader("assets/shaders/blinn.vert", "assets/shaders/blinn.frag");
+	blinnPhongShader->resetShaderPath("assets/shaders/blinn.vert", "assets/shaders/blinn.frag");
 	shaders_["blinn"] = std::move(blinnPhongShader);
 
 	// Create skinned shader for animated models
 	auto skinnedShader = std::make_unique<Shader>();
-	skinnedShader->resetShader("assets/shaders/skinned.vert", "assets/shaders/blinn.frag");
+	skinnedShader->resetShaderPath("assets/shaders/skinned.vert", "assets/shaders/blinn.frag");
 	shaders_["skinned"] = std::move(skinnedShader);
-
-	// Create line shader for debug visualization
-	auto lineShaderForMap = std::make_unique<Shader>();
-	lineShaderForMap->resetShader("assets/shaders/line.vert", "assets/shaders/line.frag");
-	shaders_["line"] = std::move(lineShaderForMap);
-
-	auto lightPointShader = std::make_unique<Shader>();
-	lightPointShader->resetShader("assets/shaders/point.vert", "assets/shaders/point.frag");
-	shaders_["lightPoint"] = std::move(lightPointShader);
 
 	// Set default main shader
 	mainShader_ = shaders_["blinn"];
 	skinnedShader_ = shaders_["skinned"];
-	lightPointShader_ = shaders_["lightPoint"];
 
 	// Initialize skeleton visualizer
 	skeletonVisualizerRef.init();
+	shaders_["skeleton"] = skeletonVisualizerRef.skeletonShader;
 	std::cout << "[Renderer] SkeletonVisualizer initialized" << std::endl;
 
 	lightVisualizerRef.init();
-	std::cout << "[Renderer] LightVisualizer initialized" << std::endl;
+	shaders_["lightPoint"] = lightVisualizerRef.lightPointShader;
+	std::cout << "[Renderer] LightPointVisualizer initialized" << std::endl;
 
 	boundingBoxVisualizerRef.init();
 	shaders_["boundingBox"] = boundingBoxVisualizerRef.boxShader;
 	std::cout << "[Renderer] BoundingBoxVisualizer initialized" << std::endl;
+
+	skyboxVisualizerRef.init();
+	shaders_["skybox_model"] = skyboxVisualizerRef.skyboxShader;
+	shaders_["skybox_cubemap"] = skyboxVisualizerRef.cubemapShader;
+	std::cout << "[Renderer] SkyboxVisualizer initialized" << std::endl;
 }
 
 void Renderer::beginFrame(int w, int h, glm::vec3 const& c)
@@ -79,11 +76,17 @@ void Renderer::beginFrame(int w, int h, glm::vec3 const& c)
 
 void Renderer::drawScene(Scene const& scene)
 {
-	// Draw opaque models
-	drawModels_(scene);
+	if (showSkybox)
+		skyboxVisualizerRef.draw(scene);
 
-	lightVisualizerRef.drawLights(scene, scene.cam.view, scene.cam.proj, lightPointShader_);
-	boundingBoxVisualizerRef.draw(scene, scene.cam.view, scene.cam.proj);
+	if (showModels)
+		drawModels_(scene);
+
+	if (showLightPoint)
+		lightVisualizerRef.draw(scene);
+
+	if (showBBox)
+		boundingBoxVisualizerRef.draw(scene);
 }
 
 void Renderer::drawModels_(Scene const& scene)
@@ -121,49 +124,21 @@ void Renderer::drawModels_(Scene const& scene)
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
 
-		// Draw the model only if models are enabled
-		if (showModels) {
-			// Choose shader based on if the model has joint matrices
-			Shader const* shaderToUse = mainShader_.get();
+		// Choose shader based on if the model has joint matrices
+		Shader const* shaderToUse = mainShader_.get();
 
-			if (skinnedShader_ && !entity.model->jointMatrices.empty() && entity.model->animations.size() > 0) {
-				shaderToUse = skinnedShader_.get();
+		if (skinnedShader_ && !entity.model->jointMatrices.empty() && entity.model->animations.size() > 0)
+			shaderToUse = skinnedShader_.get();
 
-				// Debug output
-				// std::cout << "[Renderer] Using skinned shader for: " << entity.model->modelName << " (has " << entity.model->jointMatrices.size() << " joint
-				// matrices)"
-				// << std::endl;
-			}
-			else {
-				// std::cout << "[Renderer] Using standard shader for: " << entity.model->modelName << std::endl;
-			}
-
-			// Bind the appropriate shader
-			shaderToUse->bind();
-
-			// Draw the model with the scaled model matrix
-			entity.model->draw(*shaderToUse, entity.transform);
-		}
+		shaderToUse->bind();																// Bind the appropriate shader
+		entity.model->draw(*shaderToUse, entity.transform); // Draw the model with the scaled model matrix
 
 		if (skeletonVisualizerRef.hasSkeletonData(entity.model)) {
 
 			// Draw skeleton if enabled
 			if (showSkeletons) {
-
-				// Get the line shader
-				auto& lineShader = shaders_["line"];
-				if (!lineShader) {
-					std::cout << "[Renderer ERROR] Line shader is null!" << std::endl;
-					continue;
-				}
-
-				// Set camera-related uniforms for line shader
-				lineShader->bind();
-				lineShader->sendMat4("view", scene.cam.view);
-				lineShader->sendMat4("proj", scene.cam.proj);
-
 				// Draw debug visualization
-				skeletonVisualizerRef.drawDebugLines(entity.model, entity.transform, lineShader);
+				skeletonVisualizerRef.draw(entity, scene.cam);
 
 				// Rebind main shader after drawing lines
 				mainShader_->bind();
@@ -204,4 +179,5 @@ void Renderer::cleanup()
 	skeletonVisualizerRef.cleanup();
 	lightVisualizerRef.cleanup();
 	boundingBoxVisualizerRef.cleanup();
+	skyboxVisualizerRef.cleanup();
 }
