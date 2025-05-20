@@ -68,7 +68,7 @@ std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::st
 }
 
 // Add a model to a scene with a transform matrix
-void ModelRegistry::addModelToScene(Scene& scene, std::shared_ptr<Model> model, std::string const& name, glm::mat4 transform)
+void ModelRegistry::addModelToScene(Scene& scene, std::shared_ptr<Model> model)
 {
 	if (!model) {
 		std::cout << "[ModelRegistry ERROR] Invalid Model Pointer" << std::endl;
@@ -76,47 +76,9 @@ void ModelRegistry::addModelToScene(Scene& scene, std::shared_ptr<Model> model, 
 	}
 
 	// Add to scene
-	scene.addEntity(model, transform);
+	scene.addEntity(model);
 
-	std::cout << "[ModelRegistry] Added model '" << name << "' to scene" << std::endl;
-}
-
-// Add a model with automatic centering at a specified position
-void ModelRegistry::addModelToSceneCentered(Scene& scene, std::shared_ptr<Model> model, std::string const& name, glm::vec3 position, glm::vec3 rotation,
-																						float scale)
-{
-	if (!model) {
-		std::cout << "[ModelRegistry ERROR] Invalid Model Pointer" << std::endl;
-		return;
-	}
-
-	// Calculate model center based on bounding box
-	glm::vec3 center = (model->localSpaceBBox.min + model->localSpaceBBox.max) * 0.5f;
-
-	// Calculate appropriate scale factor if needed
-	if (scale <= 0.0f) {
-		scale = 1.0f;
-	}
-
-	// Create transformation matrix
-	glm::mat4 transform = glm::mat4(1.0f);
-
-	// Apply scale
-	transform = glm::scale(transform, glm::vec3(scale));
-
-	// Apply translation to center the model first
-	transform = glm::translate(transform, -center);
-
-	// Apply rotation
-	transform = glm::rotate(transform, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-	transform = glm::rotate(transform, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-	transform = glm::rotate(transform, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-
-	// Apply final position
-	transform = glm::translate(glm::mat4(1.0f), position) * transform;
-
-	// Add to scene
-	addModelToScene(scene, model, name, transform);
+	std::cout << "[ModelRegistry] Added model '" << model->modelName << "' to scene" << std::endl;
 }
 
 // Remove a model from a scene

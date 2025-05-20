@@ -79,36 +79,20 @@ void ImGuiManager::loadSelectedModel_(Scene& scene)
 
 	// Use model name or filename if not provided
 	// Since most of the model are called scene.gltf, so we used the folder name that contained the model as the default name.
-	std::string name = loadedModelName_.empty() ? std::filesystem::path(selectedFile_).parent_path().stem().string() // Name of parent folder
-																							: loadedModelName_;
+	std::string name = targetModelName_.empty() ? std::filesystem::path(selectedFile_).parent_path().stem().string() // Name of parent folder
+																							: targetModelName_;
 
 	// Load the model
 	std::shared_ptr<Model> model = registryRef.loadModel(fullPath, name);
 
 	if (model) {
-		// Create transformation matrix
-		glm::mat4 transform = glm::mat4(1.0f);
-
-		// Apply transforms in order: scale, rotate, translate
-		transform = glm::scale(transform, glm::vec3(1.0f));
-
-		// Apply rotations in XYZ order
-		transform = glm::rotate(transform, loadedModelRotation_[0], glm::vec3(1.0f, 0.0f, 0.0f));
-		transform = glm::rotate(transform, loadedModelRotation_[1], glm::vec3(0.0f, 1.0f, 0.0f));
-		transform = glm::rotate(transform, loadedModelRotation_[2], glm::vec3(0.0f, 0.0f, 1.0f));
-
-		// Apply translation
-		transform = glm::translate(transform, glm::vec3(loadedModelPosition_[0], loadedModelPosition_[1], loadedModelPosition_[2]));
-
 		// Add to scene
-		registryRef.addModelToScene(scene, model, name, transform);
+		registryRef.addModelToScene(scene, model);
 
-		std::cout << "Model '" << name << "' loaded successfully from " << fullPath << std::endl;
+		std::cout << "Model '" << model->modelName << "' loaded successfully from " << fullPath << std::endl;
 
 		// Reset input fields
-		loadedModelName_.clear();
-		loadedModelRotation_[0] = loadedModelRotation_[1] = loadedModelRotation_[2] = 0.0f;
-		loadedModelPosition_[0] = loadedModelPosition_[1] = loadedModelPosition_[2] = 0.0f;
+		targetModelName_.clear();
 	}
 	else {
 		std::cout << "Failed to load model from " << fullPath << std::endl;
@@ -117,16 +101,18 @@ void ImGuiManager::loadSelectedModel_(Scene& scene)
 
 void ImGuiManager::drawTransformEditor_(Entity& entity)
 {
-	// Display and edit scale
-	ImGui::Text("Model Scaling:");
-
-	// Add scale slider with logarithmic scale for better control
-	ImGui::SliderFloat("Model Scale", &entity.scale, 0.01f, 10.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
-
-	// Add a reset button for convenience
-	if (ImGui::Button("Reset Scale to 1")) {
+	bool changedPos = ImGui::DragFloat3("Position", glm::value_ptr(entity.position), 0.1f);
+	bool changedRot = ImGui::DragFloat3("Rotation (deg)", glm::value_ptr(entity.rotationDeg), 1.0f);
+	bool changedScl = ImGui::SliderFloat("Model Scale", &entity.scale, 0.01f, 10.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+	if (ImGui::Button("Reset Scale to 1"))
 		entity.scale = 1.0f;
+
+	if (changedPos || changedRot || changedScl) {
+		entity.rebuildTransform();
+		entity.model->updateMatrices();
 	}
+
+	ImGui::Separator();
 }
 
 void ImGuiManager::drawModelLoaderInterface(Scene& scene)
@@ -137,14 +123,11 @@ void ImGuiManager::drawModelLoaderInterface(Scene& scene)
 		config.flags = ImGuiFileDialogFlags_ReadOnlyFileNameField;
 		config.sidePane = [this](char const*, IGFD::UserDatas, bool*) {
 			char nameBuffer[128];
-			std::strncpy(nameBuffer, loadedModelName_.c_str(), sizeof(nameBuffer));
+			std::strncpy(nameBuffer, targetModelName_.c_str(), sizeof(nameBuffer));
 			nameBuffer[sizeof(nameBuffer) - 1] = '\0';
 
 			if (ImGui::InputText("Model Name", nameBuffer, IM_ARRAYSIZE(nameBuffer)))
-				loadedModelName_ = nameBuffer;
-
-			ImGui::InputFloat3("Position", loadedModelPosition_.data());
-			ImGui::InputFloat3("Rotation", loadedModelRotation_.data());
+				targetModelName_ = nameBuffer;
 		};
 
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseModelDlg", "Choose Model", ".gltf,.glb", config);

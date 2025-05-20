@@ -49,9 +49,9 @@ private:
 	std::string selectedFile_;
 
 	// Model loading state
-	std::string loadedModelName_;
-	std::array<float, 3> loadedModelRotation_{};
-	std::array<float, 3> loadedModelPosition_{};
+	std::string targetModelName_;
+	std::array<float, 3> targetModelRotation_{};
+	std::array<float, 3> targetModelPosition_{};
 
 	// Scene management state
 	int selectedEntityIndex_{-1};

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 
 #include "BoundingBox.hpp"
@@ -25,12 +26,24 @@ struct Light {
 
 struct Entity {
 	std::shared_ptr<Model> model;
-	glm::mat4 transform;
+	glm::vec3 position{0.0f};
+	glm::vec3 rotationDeg{0.0f}; // degree
 	float scale{1.0f};
+	glm::mat4 transform{1.0f};
 
 	// Additional entity properties
 	bool visible{true};
-	bool castsShadow{true};
+
+	void rebuildTransform()
+	{
+		glm::mat4 t(1.0f);
+		t = glm::translate(t, position);
+		t = glm::rotate(t, glm::radians(rotationDeg.x), {1, 0, 0});
+		t = glm::rotate(t, glm::radians(rotationDeg.y), {0, 1, 0});
+		t = glm::rotate(t, glm::radians(rotationDeg.z), {0, 0, 1});
+		t = glm::scale(t, glm::vec3(scale));
+		transform = t;
+	}
 };
 
 class Camera {
@@ -66,7 +79,7 @@ public:
 	std::vector<Light> lights;
 
 	// Helper methods for scene management
-	void addEntity(std::shared_ptr<Model> model, glm::mat4 const& transform);
+	void addEntity(std::shared_ptr<Model> model);
 	void removeEntity(std::string const& name);
 	std::optional<std::reference_wrapper<Entity>> findEntity(std::string const& name);
 
@@ -76,7 +89,7 @@ public:
 	void setupCameraToViewScene(float padding = 1.2f);
 
 	// Position the camera to view a specific entity
-	void setupCameraToViewEntity(std::string const& entityName, float distance = 0.0f);
+	void setupCameraToViewEntity(std::string const& entityName, float padding = 1.2f);
 
 	// Load a skybox
 	void loadSkybox(std::string const& directory);

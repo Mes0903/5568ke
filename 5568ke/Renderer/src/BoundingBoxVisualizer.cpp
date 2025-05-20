@@ -80,17 +80,14 @@ void BoundingBoxVisualizer::draw(Scene const& scene, glm::mat4 const& view, glm:
 		if (!e.visible || !e.model)
 			continue;
 
-		// world-space transform incl. scale
-		glm::mat4 M = e.transform * glm::scale(glm::mat4(1.0f), glm::vec3(e.scale));
-
 		BoundingBox const& bb = e.model->localSpaceBBox;
 		glm::vec3 minW(std::numeric_limits<float>::max());
 		glm::vec3 maxW(-std::numeric_limits<float>::max());
 
-		// transform the 8 corners
+		// Transform the 8 corners to world space
 		for (int c = 0; c < 8; ++c) {
 			glm::vec3 p = {(c & 1 ? bb.max.x : bb.min.x), (c & 2 ? bb.max.y : bb.min.y), (c & 4 ? bb.max.z : bb.min.z)};
-			p = glm::vec3(M * glm::vec4(p, 1.0f));
+			p = glm::vec3(e.transform * glm::vec4(p, 1.0f));
 			minW = glm::min(minW, p);
 			maxW = glm::max(maxW, p);
 		}

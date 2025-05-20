@@ -32,11 +32,7 @@ public:
 																	 glm::vec3 rotation = glm::vec3(0.0f), float scale = 1.0f);
 
 	// Add a model to a scene with a transform matrix
-	void addModelToScene(Scene& scene, std::shared_ptr<Model> model, std::string const& name, glm::mat4 transform = glm::mat4(1.0f));
-
-	// Add a model with automatic centering at a specified position
-	void addModelToSceneCentered(Scene& scene, std::shared_ptr<Model> model, std::string const& name, glm::vec3 position = glm::vec3(0.0f),
-															 glm::vec3 rotation = glm::vec3(0.0f), float scale = 1.0f);
+	void addModelToScene(Scene& scene, std::shared_ptr<Model> model);
 
 	// Remove a model from a scene
 	void removeModelFromScene(Scene& scene, std::string const& name);

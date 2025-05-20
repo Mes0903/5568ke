@@ -141,16 +141,8 @@ void Renderer::drawModels_(Scene const& scene)
 			// Bind the appropriate shader
 			shaderToUse->bind();
 
-			// Create a modified model matrix that includes the entity's scale
-			glm::mat4 modelMatrix = entity.transform;
-
-			// Apply scaling to the model matrix
-			// We create a separate scaling matrix and multiply it with the entity's transform
-			glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(entity.scale));
-			modelMatrix = modelMatrix * scaleMatrix; // Apply scale
-
 			// Draw the model with the scaled model matrix
-			entity.model->draw(*shaderToUse, modelMatrix);
+			entity.model->draw(*shaderToUse, entity.transform);
 		}
 
 		if (skeletonVisualizerRef.hasSkeletonData(entity.model)) {
@@ -170,13 +162,8 @@ void Renderer::drawModels_(Scene const& scene)
 				lineShader->sendMat4("view", scene.cam.view);
 				lineShader->sendMat4("proj", scene.cam.proj);
 
-				// Create a scaled transform for the skeleton visualization
-				glm::mat4 modelMatrix = entity.transform;
-				glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(entity.scale));
-				modelMatrix = modelMatrix * scaleMatrix; // Apply scale
-
 				// Draw debug visualization
-				skeletonVisualizerRef.drawDebugLines(entity.model, modelMatrix, lineShader);
+				skeletonVisualizerRef.drawDebugLines(entity.model, entity.transform, lineShader);
 
 				// Rebind main shader after drawing lines
 				mainShader_->bind();

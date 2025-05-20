@@ -132,7 +132,7 @@ void Application::setupDefaultScene_()
 
 		if (model) {
 			// Add to scene
-			registry.addModelToSceneCentered(sceneRef, model, name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f));
+			registry.addModelToScene(sceneRef, model);
 
 			// Store entity name in animation state
 			animStateRef.entityName = name;
