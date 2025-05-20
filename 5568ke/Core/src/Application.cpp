@@ -256,10 +256,6 @@ void Application::tick_(float dt)
 	// Update ImGui windows
 	ImGuiManagerRef.newFrame();
 
-	if (showModelLoader_) {
-		ImGuiManagerRef.drawModelLoaderInterface(sceneRef);
-	}
-
 	if (showSceneManager_)
 		ImGuiManagerRef.drawSceneEntityManager(sceneRef);
 

@@ -55,6 +55,8 @@ private:
 
 	// Scene management state
 	int selectedEntityIndex_{-1};
+	int selectedAnimEntityIndex_{-1};
+	int selectedClipIndex_{-1};
 
 	// Utility functions
 	void loadSelectedModel_(Scene& scene);

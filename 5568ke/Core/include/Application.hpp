@@ -49,7 +49,6 @@ private:
 	double prevTime_{0.0};
 
 	// ImGui management
-	bool showModelLoader_{true};
 	bool showSceneManager_{true};
 	bool showAnimationUI_{true};
 	bool showStatsWindow_{true};

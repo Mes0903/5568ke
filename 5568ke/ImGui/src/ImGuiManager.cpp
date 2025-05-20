@@ -131,63 +131,77 @@ void ImGuiManager::drawTransformEditor_(Entity& entity)
 
 void ImGuiManager::drawModelLoaderInterface(Scene& scene)
 {
-	ImGui::Begin("Model Loader");
-
-	if (ImGui::Button("Select Model")) {
+	if (ImGui::Button("Load Model")) {
 		IGFD::FileDialogConfig config;
 		config.path = currentPath_;
+		config.flags = ImGuiFileDialogFlags_ReadOnlyFileNameField;
+		config.sidePane = [this](char const*, IGFD::UserDatas, bool*) {
+			char nameBuffer[128];
+			std::strncpy(nameBuffer, loadedModelName_.c_str(), sizeof(nameBuffer));
+			nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+
+			if (ImGui::InputText("Model Name", nameBuffer, IM_ARRAYSIZE(nameBuffer)))
+				loadedModelName_ = nameBuffer;
+
+			ImGui::InputFloat3("Position", loadedModelPosition_.data());
+			ImGui::InputFloat3("Rotation", loadedModelRotation_.data());
+		};
+
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseModelDlg", "Choose Model", ".gltf,.glb", config);
 	}
+
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+	if (ImGui::IsItemHovered()) {
+		ImGui::BeginTooltip();
+		// Tell the user they can type the model name in the dialog's file-name field
+		ImGui::TextUnformatted("You can type the desired model name directly in the side panel field of the dialog.");
+		ImGui::EndTooltip();
+	}
+	ImGui::Separator();
 
 	if (ImGuiFileDialog::Instance()->Display("ChooseModelDlg")) {
 		if (ImGuiFileDialog::Instance()->IsOk()) {
 			selectedFile_ = ImGuiFileDialog::Instance()->GetFilePathName();
 			currentPath_ = ImGuiFileDialog::Instance()->GetCurrentPath();
+			if (!selectedFile_.empty()) {
+				loadSelectedModel_(scene);
+			}
 		}
 		ImGuiFileDialog::Instance()->Close();
 	}
-
-	if (!selectedFile_.empty()) {
-		ImGui::Text("Selected: %s", selectedFile_.c_str());
-	}
-
-	char nameBuffer[128];
-	std::strncpy(nameBuffer, loadedModelName_.c_str(), sizeof(nameBuffer));
-	nameBuffer[sizeof(nameBuffer) - 1] = '\0';
-	if (ImGui::InputText("Model Name", nameBuffer, IM_ARRAYSIZE(nameBuffer))) {
-		loadedModelName_ = nameBuffer;
-	}
-	ImGui::InputFloat3("Position", loadedModelPosition_.data());
-	ImGui::InputFloat3("Rotation", loadedModelRotation_.data());
-
-	if (ImGui::Button("Load Model") && !selectedFile_.empty()) {
-		loadSelectedModel_(scene);
-	}
-
-	ImGui::End();
 }
 
 void ImGuiManager::drawSceneEntityManager(Scene& scene)
 {
 	ImGui::Begin("Scene Entities");
+	drawModelLoaderInterface(scene);
 
-	// Entity list
-	ImGui::Text("Loaded Entities:");
-	ImGui::BeginChild("Entities", ImVec2(0, 200), true);
+	{
+		float row_h = ImGui::GetFrameHeightWithSpacing();
+		int rows = static_cast<int>(scene.ents.size());
+		float pad = ImGui::GetStyle().WindowPadding.y * 2.0f;
+		float max_h = 300.0f;
+		float child_h = std::min(rows * row_h + pad, max_h);
 
-	for (size_t i = 0; i < scene.ents.size(); i++) {
-		auto const& entity = scene.ents[i];
-		bool isSelected = (selectedEntityIndex_ == static_cast<int>(i));
+		// Entity list
+		ImGui::Text("Loaded Entities:");
+		ImGui::BeginChild("Entities", ImVec2(0, child_h), true);
 
-		if (ImGui::Selectable(entity.model->modelName.c_str(), isSelected)) {
-			selectedEntityIndex_ = static_cast<int>(i);
+		for (size_t i = 0; i < scene.ents.size(); i++) {
+			auto const& entity = scene.ents[i];
+			bool isSelected = (selectedEntityIndex_ == static_cast<int>(i));
+
+			if (ImGui::Selectable(entity.model->modelName.c_str(), isSelected)) {
+				selectedEntityIndex_ = static_cast<int>(i);
+			}
 		}
+		ImGui::EndChild();
 	}
-	ImGui::EndChild();
-	ImGui::Separator();
 
 	// Entity controls (only show if an entity is selected)
 	if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < static_cast<int>(scene.ents.size())) {
+		ImGui::Separator();
 		Entity& entity = scene.ents[selectedEntityIndex_];
 
 		ImGui::Text("Entity: %s", entity.model->modelName.c_str());
@@ -204,61 +218,71 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 		}
 
 		// Remove entity button
+		ImGui::SameLine();
 		if (ImGui::Button("Remove Entity")) {
 			registryRef.removeModelFromScene(scene, entity.model->modelName);
 			selectedEntityIndex_ = -1; // Reset selection
 		}
-	}
 
-	ImGui::Separator();
-	// Show bone hierarchy
-	if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < static_cast<int>(scene.ents.size()) && ImGui::CollapsingHeader("Bone Hierarchy")) {
-		Entity& entity = scene.ents[selectedEntityIndex_];
-		if (entity.model->rootNode) {
-			// Debug info about the node count
-			ImGui::Text("Model has %zu nodes", entity.model->nodes.size());
-
-			// Find the root node and all top-level nodes
-			std::shared_ptr<Node> rootNode = entity.model->rootNode;
-			ImGui::Text("Root node ID: %d, Name: %s", rootNode->nodeNum, rootNode->nodeName.empty() ? "<unnamed>" : rootNode->nodeName.c_str());
-
-			// Show full hierarchy starting at root
-			drawNodeTree_(rootNode, 0);
-
-			// If root node doesn't have all nodes as descendants,
-			// find potential other top-level nodes
-			std::set<int> processedNodes;
-			std::function<void(std::shared_ptr<Node>)> collectNodes = [&processedNodes, &collectNodes](std::shared_ptr<Node> node) {
-				if (!node)
-					return;
-
-				processedNodes.insert(node->nodeNum);
-				for (auto& child : node->children) {
-					collectNodes(child);
-				}
-			};
-
-			// Collect all nodes in the hierarchy
-			collectNodes(rootNode);
-
-			// Check for disconnected nodes (not in the main hierarchy)
-			bool foundDisconnected = false;
-			for (size_t i = 0; i < entity.model->nodes.size(); i++) {
-				if (entity.model->nodes[i] && processedNodes.find(entity.model->nodes[i]->nodeNum) == processedNodes.end()) {
-
-					if (!foundDisconnected) {
-						ImGui::Separator();
-						ImGui::Text("Additional nodes not connected to root:");
-						foundDisconnected = true;
-					}
-
-					// Show each disconnected node
-					drawNodeTree_(entity.model->nodes[i], 0);
-				}
+		ImGui::SameLine();
+		if (ImGui::Button("View Selected Entity")) {
+			if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < scene.ents.size()) {
+				scene.setupCameraToViewEntity(scene.ents[selectedEntityIndex_].model->modelName);
 			}
 		}
-		else {
-			ImGui::Text("No node hierarchy available");
+	}
+
+	// Show bone hierarchy
+	if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < static_cast<int>(scene.ents.size())) {
+		ImGui::Separator();
+		if (ImGui::CollapsingHeader("Bone Hierarchy")) {
+			Entity& entity = scene.ents[selectedEntityIndex_];
+			if (entity.model->rootNode) {
+				// Debug info about the node count
+				ImGui::Text("Model has %zu nodes", entity.model->nodes.size());
+
+				// Find the root node and all top-level nodes
+				std::shared_ptr<Node> rootNode = entity.model->rootNode;
+				ImGui::Text("Root node ID: %d, Name: %s", rootNode->nodeNum, rootNode->nodeName.empty() ? "<unnamed>" : rootNode->nodeName.c_str());
+
+				// Show full hierarchy starting at root
+				drawNodeTree_(rootNode, 0);
+
+				// If root node doesn't have all nodes as descendants,
+				// find potential other top-level nodes
+				std::set<int> processedNodes;
+				std::function<void(std::shared_ptr<Node>)> collectNodes = [&processedNodes, &collectNodes](std::shared_ptr<Node> node) {
+					if (!node)
+						return;
+
+					processedNodes.insert(node->nodeNum);
+					for (auto& child : node->children) {
+						collectNodes(child);
+					}
+				};
+
+				// Collect all nodes in the hierarchy
+				collectNodes(rootNode);
+
+				// Check for disconnected nodes (not in the main hierarchy)
+				bool foundDisconnected = false;
+				for (size_t i = 0; i < entity.model->nodes.size(); i++) {
+					if (entity.model->nodes[i] && processedNodes.find(entity.model->nodes[i]->nodeNum) == processedNodes.end()) {
+
+						if (!foundDisconnected) {
+							ImGui::Separator();
+							ImGui::Text("Additional nodes not connected to root:");
+							foundDisconnected = true;
+						}
+
+						// Show each disconnected node
+						drawNodeTree_(entity.model->nodes[i], 0);
+					}
+				}
+			}
+			else {
+				ImGui::Text("No node hierarchy available");
+			}
 		}
 	}
 
@@ -284,15 +308,14 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 	}
 
 	// Entity selection
-	static int selectedEntityIndex_ = 0;
-	if (selectedEntityIndex_ >= entitiesWithAnimations.size())
-		selectedEntityIndex_ = 0;
+	if (selectedAnimEntityIndex_ >= entitiesWithAnimations.size())
+		selectedAnimEntityIndex_ = 0;
 
-	if (ImGui::BeginCombo("Entity", entitiesWithAnimations[selectedEntityIndex_].c_str())) {
+	if (ImGui::BeginCombo("Entity", entitiesWithAnimations[selectedAnimEntityIndex_].c_str())) {
 		for (int i = 0; i < entitiesWithAnimations.size(); i++) {
-			bool isSelected = (selectedEntityIndex_ == i);
+			bool isSelected = (selectedAnimEntityIndex_ == i);
 			if (ImGui::Selectable(entitiesWithAnimations[i].c_str(), isSelected))
-				selectedEntityIndex_ = i;
+				selectedAnimEntityIndex_ = i;
 
 			if (isSelected)
 				ImGui::SetItemDefaultFocus();
@@ -300,7 +323,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		ImGui::EndCombo();
 	}
 
-	std::string entityName = entitiesWithAnimations[selectedEntityIndex_];
+	std::string entityName = entitiesWithAnimations[selectedAnimEntityIndex_];
 	auto entOpt = sceneRef.findEntity(animStateRef.entityName);
 	if (!entOpt) {
 		ImGui::End();
@@ -321,22 +344,21 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 	for (auto const& clip : entity.model->animations)
 		clipNames.push_back(clip->clipName);
 
-	static int selectedClipIndex = 0;
-	if (selectedClipIndex >= clipNames.size())
-		selectedClipIndex = 0;
+	if (selectedClipIndex_ >= clipNames.size())
+		selectedClipIndex_ = 0;
 
-	if (ImGui::BeginCombo("Animation", clipNames.empty() ? "None" : clipNames[selectedClipIndex].c_str())) {
+	if (ImGui::BeginCombo("Animation", clipNames.empty() ? "None" : clipNames[selectedClipIndex_].c_str())) {
 		for (int i = 0; i < clipNames.size(); i++) {
-			bool isSelected = (selectedClipIndex == i);
+			bool isSelected = (selectedClipIndex_ == i);
 			if (ImGui::Selectable(clipNames[i].c_str(), isSelected)) {
-				selectedClipIndex = i;
+				selectedClipIndex_ = i;
 
 				// Update global animation state
-				animStateRef.clipIndex = selectedClipIndex;
+				animStateRef.clipIndex = selectedClipIndex_;
 
 				// Reset animation visually
-				if (model->animations.size() > selectedClipIndex) {
-					model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, 0.0f);
+				if (model->animations.size() > selectedClipIndex_) {
+					model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
 					model->updateMatrices();
 				}
 			}
@@ -362,8 +384,8 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	// Get duration
 	float duration = 0.0f;
-	if (model->animations.size() > selectedClipIndex) {
-		duration = model->animations[selectedClipIndex]->getDuration();
+	if (model->animations.size() > selectedClipIndex_) {
+		duration = model->animations[selectedClipIndex_]->getDuration();
 	}
 
 	// Time slider
@@ -375,8 +397,8 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 			animStateRef.currentTime = currentTime;
 
 			// Update animation frame if this is the current entity
-			if (model->animations.size() > selectedClipIndex) {
-				model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, currentTime);
+			if (model->animations.size() > selectedClipIndex_) {
+				model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, currentTime);
 				model->updateMatrices();
 			}
 		}
@@ -386,14 +408,14 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	// Playback buttons
 	if (ImGui::Button("Play", ImVec2(60, 30))) {
-		std::cout << "[ImGui] Play button pressed for " << entityName << ", clip " << selectedClipIndex << std::endl;
+		std::cout << "[ImGui] Play button pressed for " << entityName << ", clip " << selectedClipIndex_ << std::endl;
 
 		// Start animation
-		animStateRef.play(entityName, selectedClipIndex);
+		animStateRef.play(entityName, selectedClipIndex_);
 
 		// Apply initial frame for visual feedback
-		if (model->animations.size() > selectedClipIndex) {
-			model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, 0.0f);
+		if (model->animations.size() > selectedClipIndex_) {
+			model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
 			model->updateMatrices();
 		}
 	}
@@ -408,9 +430,9 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 	if (ImGui::Button("Resume", ImVec2(70, 30))) {
 		std::cout << "[ImGui] Resume button pressed" << std::endl;
 
-		if (animStateRef.entityName != entityName || animStateRef.clipIndex != selectedClipIndex) {
+		if (animStateRef.entityName != entityName || animStateRef.clipIndex != selectedClipIndex_) {
 			// If different entity/clip, start animation
-			animStateRef.play(entityName, selectedClipIndex, animStateRef.currentTime);
+			animStateRef.play(entityName, selectedClipIndex_, animStateRef.currentTime);
 		}
 		else {
 			// Otherwise just resume
@@ -424,8 +446,8 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		animStateRef.stop();
 
 		// Reset visually
-		if (model->animations.size() > selectedClipIndex) {
-			model->animations[selectedClipIndex]->setAnimationFrame(model->nodes, 0.0f);
+		if (model->animations.size() > selectedClipIndex_) {
+			model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
 			model->updateMatrices();
 		}
 	}
