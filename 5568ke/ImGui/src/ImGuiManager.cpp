@@ -116,6 +116,7 @@ void ImGuiManager::drawTransformEditor_(Entity& entity)
 void ImGuiManager::drawModelLoaderInterface(Scene& scene)
 {
 	if (ImGui::Button("Load Model")) {
+		ImGui::SetNextWindowSize(ImVec2(600, 250), ImGuiCond_FirstUseEver);
 		IGFD::FileDialogConfig config;
 		config.path = currentPath_;
 		config.flags = ImGuiFileDialogFlags_ReadOnlyFileNameField;
@@ -155,6 +156,9 @@ void ImGuiManager::drawModelLoaderInterface(Scene& scene)
 
 void ImGuiManager::drawSceneEntityManager(Scene& scene)
 {
+	ImGui::SetNextWindowSize(ImVec2(400, 450), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+
 	ImGui::Begin("Scene Entities");
 	drawModelLoaderInterface(scene);
 
@@ -271,6 +275,9 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 
 void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 {
+	ImGui::SetNextWindowSize(ImVec2(400, 350), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(420, 10), ImGuiCond_FirstUseEver);
+
 	ImGui::Begin("Animation Controls");
 
 	// Find entities with animations
@@ -518,6 +525,9 @@ void ImGuiManager::drawNodeTree_(std::shared_ptr<Node> node, int depth)
 
 void ImGuiManager::drawStatusWindow(Scene& scene)
 {
+	ImGui::SetNextWindowSize(ImVec2(300, 150), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(10, 470), ImGuiCond_FirstUseEver);
+
 	ImGui::Begin("Statistics");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::Text("Scene entities: %zu", scene.ents.size());
@@ -533,6 +543,9 @@ void ImGuiManager::drawStatusWindow(Scene& scene)
 
 void ImGuiManager::drawSceneControlWindow(Scene& scene)
 {
+	ImGui::SetNextWindowSize(ImVec2(400, 350), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(830, 10), ImGuiCond_FirstUseEver);
+
 	ImGui::Begin("Scene Controls");
 
 	// Skeleton visualization controls
