@@ -169,6 +169,12 @@ void Application::processInput_(float dt)
 				if (glfwGetKey(window_, GLFW_KEY_D) == GLFW_PRESS)
 					move += right;
 
+				// Jump input
+				if (glfwGetKey(window_, GLFW_KEY_SPACE) == GLFW_PRESS && animStateRef.onGround) {
+					animStateRef.verticalVelocity = animStateRef.jumpSpeed;
+					animStateRef.onGround = false;
+				}
+
 				auto resetClipToFirstFrame = [&](Entity& e) {
 					if (!e.model || e.model->animations.empty())
 						return;
@@ -291,6 +297,21 @@ void Application::tick_(float dt)
 			clip->setAnimationFrame(model->nodes, animStateRef.currentTime);
 			model->updateLocalMatrices();
 		}
+	}
+
+	// Simple gravity and jump physics
+	if (animStateRef.characterMoveMode) {
+		animStateRef.verticalVelocity -= animStateRef.gravity * dt;
+		entity.position.y += animStateRef.verticalVelocity * dt;
+
+		// Ground collision at y = 0
+		if (entity.position.y <= 0.0f) {
+			entity.position.y = 0.0f;
+			animStateRef.verticalVelocity = 0.0f;
+			animStateRef.onGround = true;
+		}
+
+		entity.rebuildTransform();
 	}
 
 	// Update camera position and matrices

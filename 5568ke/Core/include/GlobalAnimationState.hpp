@@ -23,6 +23,12 @@ public:
 	float followDistance{3.0f};
 	float followHeight{1.0f};
 
+	// Simple physics state
+	float verticalVelocity{0.0f};
+	bool onGround{true};
+	float gravity{9.8f};
+	float jumpSpeed{5.0f};
+
 	// Animation control methods
 	void play(int clip, float initialTime = 0.0f)
 	{
