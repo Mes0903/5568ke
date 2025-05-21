@@ -66,7 +66,7 @@ void Model::cleanup()
 }
 
 // Support animation functionality
-void Model::updateMatrices()
+void Model::updateLocalMatrices()
 {
 	if (!rootNode) {
 		return;

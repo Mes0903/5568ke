@@ -166,9 +166,6 @@ void SkyboxVisualizer::draw(Scene const& scene)
 		skyboxShader->sendMat4("proj", scene.cam.proj);
 		skyboxShader->sendMat4("model", skyboxModelMat);
 
-		// Set up viewPos for skybox shader
-		skyboxShader->sendVec3("viewPos", scene.cam.pos);
-
 		// Draw the skybox model
 		this->skyboxModel->draw(*skyboxShader, skyboxModelMat);
 

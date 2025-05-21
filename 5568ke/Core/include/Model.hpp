@@ -21,7 +21,7 @@ public:
 	void cleanup();
 
 	void draw(Shader const& shader, glm::mat4 const& modelMatrix) const;
-	void updateMatrices();
+	void updateLocalMatrices();
 
 public:
 	// Core model data

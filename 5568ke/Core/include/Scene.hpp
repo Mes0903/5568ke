@@ -19,9 +19,6 @@ struct Light {
 	glm::vec3 position{2.0f, 5.0f, 2.0f};
 	glm::vec3 color{1.0f, 1.0f, 1.0f};
 	float intensity{1.0f};
-
-	// Additional light properties if needed
-	bool castsShadows{false};
 };
 
 class Entity {
@@ -53,6 +50,7 @@ public:
 	void processMouse(double xpos, double ypos);
 	void updateMatrices(GLFWwindow* w); // builds view + proj
 	void lookAt(glm::vec3 const& position, glm::vec3 const& target);
+	void updateFollow(glm::vec3 const& target, float distance, float height);
 
 	// State
 	glm::vec3 pos{0.0f, 1.6f, 3.0f};

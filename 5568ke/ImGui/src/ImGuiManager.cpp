@@ -107,10 +107,8 @@ void ImGuiManager::drawTransformEditor_(Entity& entity)
 	if (ImGui::Button("Reset Scale to 1"))
 		entity.scale = 1.0f;
 
-	if (changedPos || changedRot || changedScl) {
+	if (changedPos || changedRot || changedScl)
 		entity.rebuildTransform();
-		entity.model->updateMatrices();
-	}
 }
 
 void ImGuiManager::drawModelLoaderInterface(Scene& scene)
@@ -179,6 +177,7 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 
 			if (ImGui::Selectable(entity.model->modelName.c_str(), isSelected)) {
 				selectedEntityIndex_ = static_cast<int>(i);
+				animStateRef.entityName = entity.model->modelName;
 			}
 		}
 		ImGui::EndChild();
@@ -197,7 +196,7 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 			entity.visible = visible;
 		}
 
-		// Remove entity button
+		// Remove entity buttonS
 		ImGui::SameLine();
 		if (ImGui::Button("Remove Entity")) {
 			registryRef.removeModelFromScene(scene, entity.model->modelName);
@@ -280,37 +279,6 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	ImGui::Begin("Animation Controls");
 
-	// Find entities with animations
-	std::vector<std::string> entitiesWithAnimations;
-	for (auto const& ent : scene.ents) {
-		if (ent.model && !ent.model->animations.empty()) {
-			entitiesWithAnimations.push_back(ent.model->modelName);
-		}
-	}
-
-	if (entitiesWithAnimations.empty()) {
-		ImGui::Text("No animated entities in scene");
-		ImGui::End();
-		return;
-	}
-
-	// Entity selection
-	if (selectedAnimEntityIndex_ >= entitiesWithAnimations.size())
-		selectedAnimEntityIndex_ = 0;
-
-	if (ImGui::BeginCombo("Entity", entitiesWithAnimations[selectedAnimEntityIndex_].c_str())) {
-		for (int i = 0; i < entitiesWithAnimations.size(); i++) {
-			bool isSelected = (selectedAnimEntityIndex_ == i);
-			if (ImGui::Selectable(entitiesWithAnimations[i].c_str(), isSelected))
-				selectedAnimEntityIndex_ = i;
-
-			if (isSelected)
-				ImGui::SetItemDefaultFocus();
-		}
-		ImGui::EndCombo();
-	}
-
-	std::string entityName = entitiesWithAnimations[selectedAnimEntityIndex_];
 	auto entOpt = sceneRef.findEntity(animStateRef.entityName);
 	if (!entOpt) {
 		ImGui::End();
@@ -324,7 +292,14 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		return;
 	}
 
+	ImGui::Text("Selected Model: %s", entity.model->modelName.c_str());
 	ImGui::Text("Model has %zu animations", entity.model->animations.size());
+
+	if (animStateRef.entityName != entity.model->modelName) {
+		ImGui::Text("animStateRef.entityName != entity.model->modelName");
+		ImGui::End();
+		return;
+	}
 
 	// Animation clips
 	std::vector<std::string> clipNames;
@@ -346,7 +321,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 				// Reset animation visually
 				if (model->animations.size() > selectedClipIndex_) {
 					model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
-					model->updateMatrices();
+					model->updateLocalMatrices();
 				}
 			}
 			if (isSelected) {
@@ -377,16 +352,13 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	// Time slider
 	if (duration > 0.0f) {
-		float currentTime = animStateRef.entityName == entityName ? animStateRef.currentTime : 0.0f;
+		float& currentTime = animStateRef.currentTime;
 
 		if (ImGui::SliderFloat("Time", &currentTime, 0.0f, duration)) {
-			// Set animation time for preview
-			animStateRef.currentTime = currentTime;
-
 			// Update animation frame if this is the current entity
 			if (model->animations.size() > selectedClipIndex_) {
 				model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, currentTime);
-				model->updateMatrices();
+				model->updateLocalMatrices();
 			}
 		}
 	}
@@ -395,15 +367,15 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	// Playback buttons
 	if (ImGui::Button("Play", ImVec2(60, 30))) {
-		std::cout << "[ImGui] Play button pressed for " << entityName << ", clip " << selectedClipIndex_ << std::endl;
+		std::cout << "[ImGui] Play button pressed for " << animStateRef.entityName << ", clip " << selectedClipIndex_ << std::endl;
 
 		// Start animation
-		animStateRef.play(entityName, selectedClipIndex_);
+		animStateRef.play(selectedClipIndex_);
 
 		// Apply initial frame for visual feedback
 		if (model->animations.size() > selectedClipIndex_) {
 			model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
-			model->updateMatrices();
+			model->updateLocalMatrices();
 		}
 	}
 	ImGui::SameLine();
@@ -417,9 +389,9 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 	if (ImGui::Button("Resume", ImVec2(70, 30))) {
 		std::cout << "[ImGui] Resume button pressed" << std::endl;
 
-		if (animStateRef.entityName != entityName || animStateRef.clipIndex != selectedClipIndex_) {
+		if (animStateRef.clipIndex != selectedClipIndex_) {
 			// If different entity/clip, start animation
-			animStateRef.play(entityName, selectedClipIndex_, animStateRef.currentTime);
+			animStateRef.play(selectedClipIndex_, animStateRef.currentTime);
 		}
 		else {
 			// Otherwise just resume
@@ -435,14 +407,14 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		// Reset visually
 		if (model->animations.size() > selectedClipIndex_) {
 			model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
-			model->updateMatrices();
+			model->updateLocalMatrices();
 		}
 	}
 
 	// Animation state display
-	ImGui::Text("Animation State: %s", animStateRef.isAnimating && animStateRef.entityName == entityName ? "Playing" : "Stopped");
+	ImGui::Text("Animation State: %s", animStateRef.isAnimating ? "Playing" : "Stopped");
 
-	if (animStateRef.isAnimating && animStateRef.entityName == entityName) {
+	if (animStateRef.isAnimating) {
 		ImGui::Text("Current Time: %.2f / %.2f", animStateRef.currentTime, duration);
 
 		// Progress bar
@@ -591,6 +563,14 @@ void ImGuiManager::drawSceneControlWindow(Scene& scene)
 
 		// Camera direction (read-only)
 		ImGui::Text("Direction: (%.2f, %.2f, %.2f)", scene.cam.front.x, scene.cam.front.y, scene.cam.front.z);
+
+		// Character mode, make camera following entity
+		bool& charMode = animStateRef.characterMoveMode;
+		ImGui::Checkbox("Enable Character Move", &charMode);
+		if (charMode) {
+			ImGui::SliderFloat("Follow Distance", &animStateRef.followDistance, 1.0f, 50.0f);
+			ImGui::SliderFloat("Follow Height", &animStateRef.followHeight, 1.0f, 50.0f);
+		}
 
 		// Camera view reset buttons
 		if (ImGui::Button("Reset Camera")) {

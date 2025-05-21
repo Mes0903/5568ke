@@ -3,7 +3,6 @@ out vec4 FragColor;
 in VS_OUT{vec3 Pos;vec3 N;vec2 UV;} fs;
 uniform sampler2D tex0;   // base
 uniform sampler2D tex1;   // overlay, may be all-transparent
-uniform vec3 viewPos;     // Camera position
 
 void main()
 {

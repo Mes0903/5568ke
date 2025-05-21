@@ -86,6 +86,19 @@ void Camera::lookAt(glm::vec3 const& position, glm::vec3 const& target)
 	view = glm::lookAt(pos, pos + front, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+// Update camera position to orbit around a target at a fixed distance
+void Camera::updateFollow(glm::vec3 const& target, float distance, float height)
+{
+	glm::vec3 center = target + glm::vec3(0.0f, height, 0.0f);
+
+	// Spherical to Cartesian
+	glm::vec3 offset(distance * cos(glm::radians(pitch)) * cos(glm::radians(yaw)), distance * sin(glm::radians(pitch)),
+									 distance * cos(glm::radians(pitch)) * sin(glm::radians(yaw)));
+
+	pos = center - offset;
+	front = glm::normalize(center - pos);
+}
+
 Scene& Scene::getInstance()
 {
 	static Scene instance;

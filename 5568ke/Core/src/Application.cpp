@@ -2,20 +2,16 @@
 
 #include "Application.hpp"
 
+#include <cmath>
 #include <iostream>
 
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "AnimationClip.hpp"
 #include "Model.hpp"
 
-Application::Application()
-{
-	// Initialize to false
-	for (int i = 0; i < 1024; i++)
-		keys_[i] = false;
-}
-
+Application::Application() {}
 Application::~Application() { cleanup_(); }
 
 int Application::run()
@@ -153,24 +149,75 @@ void Application::processInput_(float dt)
 {
 	// Only process keyboard input for camera if cursor is disabled
 	int cursorMode = glfwGetInputMode(window_, GLFW_CURSOR);
+	bool charMode = animStateRef.characterMoveMode;
 	if (cursorMode == GLFW_CURSOR_DISABLED) {
-		// Process keyboard input for camera movement
-		sceneRef.cam.processKeyboard(dt, window_);
+		if (charMode) {
+			auto entOpt = sceneRef.findEntity(animStateRef.entityName);
+			if (entOpt) {
+				Entity& entity = entOpt->get();
+				glm::vec3 forward = glm::normalize(glm::vec3(sceneRef.cam.front.x, 0.0f, sceneRef.cam.front.z));
+				glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
+
+				glm::vec3 move(0.0f);
+				float speed = animStateRef.camSpeed;
+				if (glfwGetKey(window_, GLFW_KEY_W) == GLFW_PRESS)
+					move += forward;
+				if (glfwGetKey(window_, GLFW_KEY_S) == GLFW_PRESS)
+					move -= forward;
+				if (glfwGetKey(window_, GLFW_KEY_A) == GLFW_PRESS)
+					move -= right;
+				if (glfwGetKey(window_, GLFW_KEY_D) == GLFW_PRESS)
+					move += right;
+
+				auto resetClipToFirstFrame = [&](Entity& e) {
+					if (!e.model || e.model->animations.empty())
+						return;
+
+					int clip = animStateRef.clipIndex;
+					if (clip >= e.model->animations.size())
+						clip = 0;
+
+					e.model->animations[clip]->setAnimationFrame(e.model->nodes, 0.0f);
+					e.model->updateLocalMatrices();
+				};
+
+				bool isMoving = glm::length(move) > 0.0f;
+				bool startedMoving = isMoving && !animStateRef.wasMoving;
+				bool stoppedMoving = !isMoving && animStateRef.wasMoving;
+
+				if (isMoving) {
+					// Update position and direction
+					move = glm::normalize(move) * speed * dt;
+					entity.position += move;
+
+					glm::vec2 dir2D(move.x, move.z);
+					if (glm::length(dir2D) > 0.0f)
+						entity.rotationDeg.y = glm::degrees(atan2(move.x, move.z));
+
+					entity.rebuildTransform();
+				}
+
+				// Changed the statue of animation
+				if (startedMoving) {
+					animStateRef.play(std::min<int>(animStateRef.clipIndex, entity.model->animations.size() - 1), 0.0f);
+					resetClipToFirstFrame(entity); // Start from frame 0
+				}
+				else if (stoppedMoving) {
+					animStateRef.stop();
+					resetClipToFirstFrame(entity); // Reset to frame 0
+				}
+
+				animStateRef.wasMoving = isMoving;
+			}
+		}
+		else {
+			// Camera free movement
+			sceneRef.cam.processKeyboard(dt, window_);
+		}
 	}
 
 	// Update animation if playing
 	if (animStateRef.isAnimating) {
-		// Find entity if not set
-		if (animStateRef.entityName.empty()) {
-			for (auto& entity : sceneRef.ents) {
-				if (entity.model && !entity.model->animations.empty()) {
-					animStateRef.entityName = entity.model->modelName;
-					std::cout << "[Animation] Found entity: " << animStateRef.entityName << std::endl;
-					break;
-				}
-			}
-		}
-
 		// Update animation
 		auto entOpt = sceneRef.findEntity(animStateRef.entityName);
 		if (!entOpt)
@@ -202,7 +249,7 @@ void Application::processInput_(float dt)
 							<< ", clip=" << animStateRef.clipIndex << std::endl;
 
 		clip->setAnimationFrame(model->nodes, animStateRef.currentTime);
-		model->updateMatrices();
+		model->updateLocalMatrices();
 	}
 }
 
@@ -211,54 +258,46 @@ void Application::tick_(float dt)
 	// Process input (keyboard, mouse)
 	processInput_(dt);
 
+	// Look up the target entity
+	auto entOpt = sceneRef.findEntity(animStateRef.entityName);
+	if (!entOpt)
+		return;
+
+	Entity& entity = entOpt->get();
+
 	// Update animation state
 	if (animStateRef.isAnimating && !animStateRef.entityName.empty()) {
-		// Look up the target entity
-		auto entOpt = sceneRef.findEntity(animStateRef.entityName);
-		if (!entOpt)
-			return;
-
-		Entity& entity = entOpt->get();
 		auto model = entity.model;
-		if (!model || model->animations.empty())
-			return;
-
-		// Ensure clip index is within bounds
-		if (animStateRef.clipIndex >= model->animations.size())
-			animStateRef.clipIndex = 0;
-
-		// Advance animation time
-		auto& clip = model->animations[animStateRef.clipIndex];
-		animStateRef.currentTime += dt * animStateRef.getAnimateSpeed();
-
-		// Wrap time if the clip should loop
-		float duration = clip->getDuration();
-		if (duration > 0.0f && animStateRef.currentTime > duration) {
-			animStateRef.currentTime = std::fmod(animStateRef.currentTime, duration);
+		if (!model || model->animations.empty()) {
+			// If the selected entity has no animations, stop the animation playback instead of skipping the rest of this tick to keep camera and UI responsive.
+			animStateRef.stop();
 		}
+		else {
+			// Ensure clip index is within bounds
+			if (animStateRef.clipIndex >= model->animations.size())
+				animStateRef.clipIndex = 0;
 
-		// Apply the animation pose and update matrices
-		clip->setAnimationFrame(model->nodes, animStateRef.currentTime);
-		model->updateMatrices();
+			// Advance animation time
+			auto& clip = model->animations[animStateRef.clipIndex];
+			animStateRef.currentTime += dt * animStateRef.getAnimateSpeed();
+
+			// Wrap time if the clip should loop
+			float duration = clip->getDuration();
+			if (duration > 0.0f && animStateRef.currentTime > duration) {
+				animStateRef.currentTime = std::fmod(animStateRef.currentTime, duration);
+			}
+
+			// Apply the animation pose and update matrices
+			clip->setAnimationFrame(model->nodes, animStateRef.currentTime);
+			model->updateLocalMatrices();
+		}
 	}
 
-	// Update camera matrices
+	// Update camera position and matrices
+	if (animStateRef.characterMoveMode && !animStateRef.entityName.empty())
+		sceneRef.cam.updateFollow(entity.position, animStateRef.followDistance, animStateRef.followHeight);
+
 	sceneRef.cam.updateMatrices(window_);
-
-	// Update ImGui windows
-	ImGuiManagerRef.newFrame();
-
-	if (showSceneManager_)
-		ImGuiManagerRef.drawSceneEntityManager(sceneRef);
-
-	if (showAnimationUI_)
-		ImGuiManagerRef.drawAnimationControlPanel(sceneRef);
-
-	if (showStatsWindow_)
-		ImGuiManagerRef.drawStatusWindow(sceneRef);
-
-	if (showSceneControlsWindow_)
-		ImGuiManagerRef.drawSceneControlWindow(sceneRef);
 }
 
 void Application::render_()
@@ -274,6 +313,21 @@ void Application::render_()
 
 	// End frame (cleanup rendering state)
 	rendererRef.endFrame();
+
+	// Update ImGui windows
+	ImGuiManagerRef.newFrame();
+
+	if (showSceneManager_)
+		ImGuiManagerRef.drawSceneEntityManager(sceneRef);
+
+	if (showAnimationUI_)
+		ImGuiManagerRef.drawAnimationControlPanel(sceneRef);
+
+	if (showStatsWindow_)
+		ImGuiManagerRef.drawStatusWindow(sceneRef);
+
+	if (showSceneControlsWindow_)
+		ImGuiManagerRef.drawSceneControlWindow(sceneRef);
 
 	// Render ImGui on top of the scene
 	ImGuiManagerRef.render();

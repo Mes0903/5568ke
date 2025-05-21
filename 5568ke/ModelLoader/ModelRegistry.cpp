@@ -57,7 +57,7 @@ std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::st
 	if (model) {
 		// Cache the model
 		model->modelName = modelName;
-		model->updateMatrices();
+		model->updateLocalMatrices();
 
 		std::cout << "[ModelRegistry] Successfully loaded model '" << modelName << "'" << std::endl;
 		return model;

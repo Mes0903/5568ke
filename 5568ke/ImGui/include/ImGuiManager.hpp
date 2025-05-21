@@ -54,8 +54,7 @@ private:
 	std::array<float, 3> targetModelPosition_{};
 
 	// Scene management state
-	int selectedEntityIndex_{-1};
-	int selectedAnimEntityIndex_{-1};
+	int selectedEntityIndex_{};
 	int selectedClipIndex_{-1};
 
 	// Utility functions

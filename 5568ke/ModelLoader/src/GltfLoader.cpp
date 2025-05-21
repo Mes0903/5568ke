@@ -108,7 +108,7 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 	// Load animations if available
 	if (!gltfModel.animations.empty()) {
 		loadAnimations_(model, gltfModel);
-		model->updateMatrices();
+		model->updateLocalMatrices();
 		std::cout << "[GltfLoader INFO] Loaded " << model->animations.size() << " animation clips" << std::endl;
 	}
 
