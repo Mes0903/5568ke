@@ -173,9 +173,9 @@ void SkeletonVisualizer::processNodeTreePositionsRecursive(std::shared_ptr<Node>
 	}
 }
 
-void SkeletonVisualizer::draw(Entity const& entity, Camera const& cam)
+void SkeletonVisualizer::draw(GameObject const& gameObject, Camera const& cam)
 {
-	auto model = entity.model;
+	auto model = gameObject.getModel();
 
 	if (!model || !skeletonShader) {
 		std::cout << "[SkeletonVisualizer ERROR] Model or skeleton shader is null!" << std::endl;
@@ -183,7 +183,7 @@ void SkeletonVisualizer::draw(Entity const& entity, Camera const& cam)
 	}
 
 	// Clear the cached skeleton data for this model to regenerate it with new parameters
-	auto it = skeletonCache.find(entity.model);
+	auto it = skeletonCache.find(gameObject.getModel());
 	if (it != skeletonCache.end()) {
 		skeletonCache.erase(it);
 	}
@@ -226,7 +226,7 @@ void SkeletonVisualizer::draw(Entity const& entity, Camera const& cam)
 	skeletonShader->bind();
 	skeletonShader->sendMat4("view", cam.view);
 	skeletonShader->sendMat4("proj", cam.proj);
-	skeletonShader->sendMat4("model", entity.transform);
+	skeletonShader->sendMat4("model", gameObject.getTransform());
 
 	// Draw lines with wider lines for better visibility
 	glLineWidth(3.0f); // Make lines thicker

@@ -12,6 +12,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "AnimationClip.hpp"
+#include "Collider.hpp"
 #include "ImGuiFileDialog.h"
 #include "Model.hpp"
 #include "Node.hpp"
@@ -87,7 +88,11 @@ void ImGuiManager::loadSelectedModel_(Scene& scene)
 
 	if (model) {
 		// Add to scene
-		registryRef.addModelToScene(scene, model);
+		auto goPtr = registryRef.addModelToScene(scene, model);
+		if (goPtr) {
+			auto modelCol = std::make_shared<AABBCollider>(goPtr);
+			collisionSysRef.add(modelCol);
+		}
 
 		std::cout << "Model '" << model->modelName << "' loaded successfully from " << fullPath << std::endl;
 
@@ -99,16 +104,23 @@ void ImGuiManager::loadSelectedModel_(Scene& scene)
 	}
 }
 
-void ImGuiManager::drawTransformEditor_(Entity& entity)
+void ImGuiManager::drawTransformEditor_(GameObject& gameObject)
 {
-	bool changedPos = ImGui::DragFloat3("Position", glm::value_ptr(entity.position), 0.1f);
-	bool changedRot = ImGui::DragFloat3("Rotation (deg)", glm::value_ptr(entity.rotationDeg), 1.0f);
-	bool changedScl = ImGui::SliderFloat("Model Scale", &entity.scale, 0.01f, 10.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+	bool changedPos = ImGui::DragFloat3("Position", glm::value_ptr(gameObject.position), 0.1f);
+	bool changedRot = ImGui::DragFloat3("Rotation (deg)", glm::value_ptr(gameObject.rotationDeg), 1.0f);
+
+	// Handle scale uniformly
+	float uniformScale = gameObject.scale.x;
+	bool changedScl = ImGui::SliderFloat("GameObject Scale", &uniformScale, 0.01f, 10.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+	if (changedScl) {
+		gameObject.scale = glm::vec3(uniformScale);
+	}
+
 	if (ImGui::Button("Reset Scale to 1"))
-		entity.scale = 1.0f;
+		gameObject.scale = glm::vec3(1.0f);
 
 	if (changedPos || changedRot || changedScl)
-		entity.rebuildTransform();
+		gameObject.updateTransformMatrix();
 }
 
 void ImGuiManager::drawModelLoaderInterface(Scene& scene)
@@ -152,7 +164,7 @@ void ImGuiManager::drawModelLoaderInterface(Scene& scene)
 	}
 }
 
-void ImGuiManager::drawSceneEntityManager(Scene& scene)
+void ImGuiManager::drawSceneGameObjectManager(Scene& scene)
 {
 	ImGui::SetNextWindowSize(ImVec2(400, 450), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
@@ -162,70 +174,70 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 
 	{
 		float row_h = ImGui::GetFrameHeightWithSpacing();
-		int rows = static_cast<int>(scene.ents.size());
+		int rows = static_cast<int>(scene.gameObjects.size());
 		float pad = ImGui::GetStyle().WindowPadding.y * 2.0f;
 		float max_h = 300.0f;
 		float child_h = std::min(rows * row_h + pad, max_h);
 
-		// Entity list
+		// GameObject list
 		ImGui::Text("Loaded Entities:");
 		ImGui::BeginChild("Entities", ImVec2(0, child_h), true);
 
-		for (size_t i = 0; i < scene.ents.size(); i++) {
-			auto const& entity = scene.ents[i];
-			bool isSelected = (selectedEntityIndex_ == static_cast<int>(i));
+		for (size_t i = 0; i < scene.gameObjects.size(); i++) {
+			auto const& gameObject = *scene.gameObjects[i];
+			bool isSelected = (selectedGameObjectIndex_ == static_cast<int>(i));
 
-			if (ImGui::Selectable(entity.model->modelName.c_str(), isSelected)) {
-				selectedEntityIndex_ = static_cast<int>(i);
-				animStateRef.entityName = entity.model->modelName;
+			if (ImGui::Selectable(gameObject.getModel()->modelName.c_str(), isSelected)) {
+				selectedGameObjectIndex_ = static_cast<int>(i);
+				animStateRef.gameObjectName = gameObject.getModel()->modelName;
 			}
 		}
 		ImGui::EndChild();
 	}
 
-	// Entity controls (only show if an entity is selected)
-	if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < static_cast<int>(scene.ents.size())) {
+	// GameObject controls (only show if an gameObject is selected)
+	if (selectedGameObjectIndex_ >= 0 && selectedGameObjectIndex_ < static_cast<int>(scene.gameObjects.size())) {
 		ImGui::Separator();
-		Entity& entity = scene.ents[selectedEntityIndex_];
+		auto& gameObject = *scene.gameObjects[selectedGameObjectIndex_];
 
-		ImGui::Text("Entity: %s", entity.model->modelName.c_str());
+		ImGui::Text("GameObject: %s", gameObject.getModel()->modelName.c_str());
 
 		// Visibility toggle
-		bool visible = entity.visible;
+		bool visible = gameObject.visible;
 		if (ImGui::Checkbox("Visible", &visible)) {
-			entity.visible = visible;
+			gameObject.visible = visible;
 		}
 
-		// Remove entity buttonS
+		// Remove gameObject buttonS
 		ImGui::SameLine();
-		if (ImGui::Button("Remove Entity")) {
-			registryRef.removeModelFromScene(scene, entity.model->modelName);
-			selectedEntityIndex_ = -1; // Reset selection
+		if (ImGui::Button("Remove GameObject")) {
+			registryRef.removeModelFromScene(scene, gameObject.getModel()->modelName);
+			selectedGameObjectIndex_ = -1; // Reset selection
 		}
 
 		ImGui::SameLine();
-		if (ImGui::Button("View Selected Entity")) {
-			if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < scene.ents.size()) {
-				scene.setupCameraToViewEntity(scene.ents[selectedEntityIndex_].model->modelName);
+		if (ImGui::Button("View Selected GameObject")) {
+			if (selectedGameObjectIndex_ >= 0 && static_cast<std::size_t>(selectedGameObjectIndex_) < scene.gameObjects.size()) {
+				scene.setupCameraToViewGameObject(gameObject.getModel()->modelName);
 			}
 		}
 
 		// Transform editor
 		if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-			drawTransformEditor_(entity);
+			drawTransformEditor_(gameObject);
 	}
 
 	// Show bone hierarchy
-	if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < static_cast<int>(scene.ents.size())) {
+	if (selectedGameObjectIndex_ >= 0 && selectedGameObjectIndex_ < static_cast<int>(scene.gameObjects.size())) {
 		ImGui::Separator();
 		if (ImGui::CollapsingHeader("Bone Hierarchy")) {
-			Entity& entity = scene.ents[selectedEntityIndex_];
-			if (entity.model->rootNode) {
+			auto& gameObject = *scene.gameObjects[selectedGameObjectIndex_];
+			if (gameObject.getModel()->rootNode) {
 				// Debug info about the node count
-				ImGui::Text("Model has %zu nodes", entity.model->nodes.size());
+				ImGui::Text("Model has %zu nodes", gameObject.getModel()->nodes.size());
 
 				// Find the root node and all top-level nodes
-				std::shared_ptr<Node> rootNode = entity.model->rootNode;
+				std::shared_ptr<Node> rootNode = gameObject.getModel()->rootNode;
 				ImGui::Text("Root node ID: %d, Name: %s", rootNode->nodeNum, rootNode->nodeName.empty() ? "<unnamed>" : rootNode->nodeName.c_str());
 
 				// Show full hierarchy starting at root
@@ -249,8 +261,8 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 
 				// Check for disconnected nodes (not in the main hierarchy)
 				bool foundDisconnected = false;
-				for (size_t i = 0; i < entity.model->nodes.size(); i++) {
-					if (entity.model->nodes[i] && processedNodes.find(entity.model->nodes[i]->nodeNum) == processedNodes.end()) {
+				for (size_t i = 0; i < gameObject.getModel()->nodes.size(); i++) {
+					if (gameObject.getModel()->nodes[i] && processedNodes.find(gameObject.getModel()->nodes[i]->nodeNum) == processedNodes.end()) {
 
 						if (!foundDisconnected) {
 							ImGui::Separator();
@@ -259,7 +271,7 @@ void ImGuiManager::drawSceneEntityManager(Scene& scene)
 						}
 
 						// Show each disconnected node
-						drawNodeTree_(entity.model->nodes[i], 0);
+						drawNodeTree_(gameObject.getModel()->nodes[i], 0);
 					}
 				}
 			}
@@ -279,38 +291,33 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	ImGui::Begin("Animation Controls");
 
-	auto entOpt = sceneRef.findEntity(animStateRef.entityName);
-	if (!entOpt) {
+	auto goPtr = sceneRef.findGameObject(animStateRef.gameObjectName);
+	if (!goPtr || !goPtr->getModel()) {
 		ImGui::End();
 		return;
 	}
 
-	Entity& entity = entOpt->get();
-	auto model = entity.model;
-	if (!entity.model) {
-		ImGui::End();
-		return;
-	}
+	GameObject& gameObject = *goPtr;
+	Model& model = *gameObject.getModel();
+	ImGui::Text("Selected Model: %s", gameObject.getModel()->modelName.c_str());
+	ImGui::Text("Model has %zu animations", gameObject.getModel()->animations.size());
 
-	ImGui::Text("Selected Model: %s", entity.model->modelName.c_str());
-	ImGui::Text("Model has %zu animations", entity.model->animations.size());
-
-	if (animStateRef.entityName != entity.model->modelName) {
-		ImGui::Text("animStateRef.entityName != entity.model->modelName");
+	if (animStateRef.gameObjectName != gameObject.getModel()->modelName) {
+		ImGui::Text("animStateRef.gameObjectName != gameObject.getModel()->modelName");
 		ImGui::End();
 		return;
 	}
 
 	// Animation clips
 	std::vector<std::string> clipNames;
-	for (auto const& clip : entity.model->animations)
+	for (auto const& clip : gameObject.getModel()->animations)
 		clipNames.push_back(clip->clipName);
 
-	if (selectedClipIndex_ >= clipNames.size())
+	if (static_cast<std::size_t>(selectedClipIndex_) >= clipNames.size())
 		selectedClipIndex_ = 0;
 
 	if (ImGui::BeginCombo("Animation", clipNames.empty() ? "None" : clipNames[selectedClipIndex_].c_str())) {
-		for (int i = 0; i < clipNames.size(); i++) {
+		for (int i = 0; static_cast<std::size_t>(i) < clipNames.size(); i++) {
 			bool isSelected = (selectedClipIndex_ == i);
 			if (ImGui::Selectable(clipNames[i].c_str(), isSelected)) {
 				selectedClipIndex_ = i;
@@ -319,9 +326,9 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 				animStateRef.clipIndex = selectedClipIndex_;
 
 				// Reset animation visually
-				if (model->animations.size() > selectedClipIndex_) {
-					model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
-					model->updateLocalMatrices();
+				if (model.animations.size() > static_cast<std::size_t>(selectedClipIndex_)) {
+					model.animations[selectedClipIndex_]->setAnimationFrame(model.nodes, 0.0f);
+					model.updateLocalMatrices();
 				}
 			}
 			if (isSelected) {
@@ -346,8 +353,8 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	// Get duration
 	float duration = 0.0f;
-	if (model->animations.size() > selectedClipIndex_) {
-		duration = model->animations[selectedClipIndex_]->getDuration();
+	if (model.animations.size() > static_cast<std::size_t>(selectedClipIndex_)) {
+		duration = model.animations[selectedClipIndex_]->getDuration();
 	}
 
 	// Time slider
@@ -355,10 +362,10 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		float& currentTime = animStateRef.currentTime;
 
 		if (ImGui::SliderFloat("Time", &currentTime, 0.0f, duration)) {
-			// Update animation frame if this is the current entity
-			if (model->animations.size() > selectedClipIndex_) {
-				model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, currentTime);
-				model->updateLocalMatrices();
+			// Update animation frame if this is the current gameObject
+			if (model.animations.size() > static_cast<std::size_t>(selectedClipIndex_)) {
+				model.animations[selectedClipIndex_]->setAnimationFrame(model.nodes, currentTime);
+				model.updateLocalMatrices();
 			}
 		}
 	}
@@ -367,15 +374,15 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 
 	// Playback buttons
 	if (ImGui::Button("Play", ImVec2(60, 30))) {
-		std::cout << "[ImGui] Play button pressed for " << animStateRef.entityName << ", clip " << selectedClipIndex_ << std::endl;
+		std::cout << "[ImGui] Play button pressed for " << animStateRef.gameObjectName << ", clip " << selectedClipIndex_ << std::endl;
 
 		// Start animation
 		animStateRef.play(selectedClipIndex_);
 
 		// Apply initial frame for visual feedback
-		if (model->animations.size() > selectedClipIndex_) {
-			model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
-			model->updateLocalMatrices();
+		if (model.animations.size() > static_cast<std::size_t>(selectedClipIndex_)) {
+			model.animations[selectedClipIndex_]->setAnimationFrame(model.nodes, 0.0f);
+			model.updateLocalMatrices();
 		}
 	}
 	ImGui::SameLine();
@@ -390,7 +397,7 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		std::cout << "[ImGui] Resume button pressed" << std::endl;
 
 		if (animStateRef.clipIndex != selectedClipIndex_) {
-			// If different entity/clip, start animation
+			// If different gameObject/clip, start animation
 			animStateRef.play(selectedClipIndex_, animStateRef.currentTime);
 		}
 		else {
@@ -405,9 +412,9 @@ void ImGuiManager::drawAnimationControlPanel(Scene& scene)
 		animStateRef.stop();
 
 		// Reset visually
-		if (model->animations.size() > selectedClipIndex_) {
-			model->animations[selectedClipIndex_]->setAnimationFrame(model->nodes, 0.0f);
-			model->updateLocalMatrices();
+		if (model.animations.size() > static_cast<std::size_t>(selectedClipIndex_)) {
+			model.animations[selectedClipIndex_]->setAnimationFrame(model.nodes, 0.0f);
+			model.updateLocalMatrices();
 		}
 	}
 
@@ -502,13 +509,13 @@ void ImGuiManager::drawStatusWindow(Scene& scene)
 
 	ImGui::Begin("Statistics");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::Text("Scene entities: %zu", scene.ents.size());
+	ImGui::Text("Scene entities: %zu", scene.gameObjects.size());
 	ImGui::Text("Press TAB to toggle camera mode");
 	ImGui::Text("F1-F4 to toggle UI windows");
 
 	// Show animation state if active
 	if (animStateRef.isAnimating)
-		ImGui::Text("Animating: %s (clip %d, time %.2f)", animStateRef.entityName.c_str(), animStateRef.clipIndex, animStateRef.currentTime);
+		ImGui::Text("Animating: %s (clip %d, time %.2f)", animStateRef.gameObjectName.c_str(), animStateRef.clipIndex, animStateRef.currentTime);
 
 	ImGui::End();
 }
@@ -564,7 +571,7 @@ void ImGuiManager::drawSceneControlWindow(Scene& scene)
 		// Camera direction (read-only)
 		ImGui::Text("Direction: (%.2f, %.2f, %.2f)", scene.cam.front.x, scene.cam.front.y, scene.cam.front.z);
 
-		// Character mode, make camera following entity
+		// Character mode, make camera following gameObject
 		bool& charMode = animStateRef.characterMoveMode;
 		ImGui::Checkbox("Enable Character Move", &charMode);
 		if (charMode) {
@@ -579,9 +586,9 @@ void ImGuiManager::drawSceneControlWindow(Scene& scene)
 
 		ImGui::SameLine();
 
-		if (ImGui::Button("View Selected Entity")) {
-			if (selectedEntityIndex_ >= 0 && selectedEntityIndex_ < scene.ents.size()) {
-				scene.setupCameraToViewEntity(scene.ents[selectedEntityIndex_].model->modelName);
+		if (ImGui::Button("View Selected GameObject")) {
+			if (selectedGameObjectIndex_ >= 0 && static_cast<std::size_t>(selectedGameObjectIndex_) < scene.gameObjects.size()) {
+				scene.setupCameraToViewGameObject(scene.gameObjects[selectedGameObjectIndex_]->getModel()->modelName);
 			}
 		}
 	}

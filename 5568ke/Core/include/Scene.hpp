@@ -11,6 +11,7 @@
 #include <glm/mat4x4.hpp>
 
 #include "BoundingBox.hpp"
+#include "GameObject.hpp"
 #include "include_5568ke.hpp"
 
 class Model;
@@ -19,29 +20,6 @@ struct Light {
 	glm::vec3 position{2.0f, 5.0f, 2.0f};
 	glm::vec3 color{1.0f, 1.0f, 1.0f};
 	float intensity{1.0f};
-};
-
-class Entity {
-public:
-	std::shared_ptr<Model> model;
-	glm::vec3 position{0.0f};
-	glm::vec3 rotationDeg{0.0f}; // degree
-	float scale{1.0f};
-	glm::mat4 transform{1.0f};
-
-	// Additional entity properties
-	bool visible{true};
-
-	void rebuildTransform()
-	{
-		glm::mat4 t(1.0f);
-		t = glm::translate(t, position);
-		t = glm::rotate(t, glm::radians(rotationDeg.x), {1, 0, 0});
-		t = glm::rotate(t, glm::radians(rotationDeg.y), {0, 1, 0});
-		t = glm::rotate(t, glm::radians(rotationDeg.z), {0, 0, 1});
-		t = glm::scale(t, glm::vec3(scale));
-		transform = t;
-	}
 };
 
 class Camera {
@@ -74,25 +52,27 @@ public:
 
 	// Core scene components
 	Camera cam;
-	std::vector<Entity> ents;
+	std::vector<std::shared_ptr<GameObject>> gameObjects;
 	std::vector<Light> lights;
 
 	// Helper methods for scene management
-	void addEntity(std::shared_ptr<Model> model);
-	void removeEntity(std::string const& name);
-	std::optional<std::reference_wrapper<Entity>> findEntity(std::string const& name);
+	std::shared_ptr<GameObject> addGameObject(std::shared_ptr<Model> model);
+	void removeGameObject(std::string const& name);
+	std::shared_ptr<GameObject> findGameObject(std::string const& name) const;
 
 	void addLight(glm::vec3 const& position, glm::vec3 const& color = glm::vec3(1.0f), float intensity = 1.0f);
 
-	// Position the camera to view the entire scene
+	// Position the camera to view the entire scene or a specific game object
 	void setupCameraToViewScene(float padding = 1.2f);
-
-	// Position the camera to view a specific entity
-	void setupCameraToViewEntity(std::string const& entityName, float padding = 1.2f);
+	void setupCameraToViewGameObject(std::string const& gameObjectName, float padding = 1.2f);
 
 	// Skybox usage
 	bool hasSkybox{false};
 	std::string skyboxPath;
+
+	// Scene queries
+	size_t getGameObjectCount() const { return gameObjects.size(); }
+	size_t getVisibleGameObjectCount() const;
 
 	// Cleanup resources
 	void cleanup();

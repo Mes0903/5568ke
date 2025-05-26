@@ -43,7 +43,8 @@ void updateNodeListJointMatrices(Model& model)
 		int nodeIndex = node->nodeNum;
 		if (nodeIndex < model.nodeToJointMapping.size()) {
 			int jointIndex = model.nodeToJointMapping[nodeIndex];
-			if (jointIndex >= 0 && jointIndex < model.jointMatrices.size() && jointIndex < model.inverseBindMatrices.size()) {
+			if (jointIndex >= 0 && static_cast<std::size_t>(jointIndex) < model.jointMatrices.size() &&
+					static_cast<std::size_t>(jointIndex) < model.inverseBindMatrices.size()) {
 				model.jointMatrices[jointIndex] = node->getNodeMatrix() * model.inverseBindMatrices[jointIndex];
 			}
 		}

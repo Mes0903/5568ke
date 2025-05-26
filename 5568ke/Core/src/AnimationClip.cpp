@@ -46,14 +46,13 @@ void AnimationClip::setAnimationFrame(std::vector<std::shared_ptr<Node>> const& 
 			continue; // Skip invalid channels
 
 		int targetNode = channel->targetNode;
-		if (targetNode < 0 || targetNode >= nodes.size() || !nodes[targetNode])
+		if (targetNode < 0 || static_cast<std::size_t>(targetNode) >= nodes.size() || !nodes[targetNode])
 			continue; // Skip invalid target nodes
 
 		auto& node = nodes[targetNode];
 
 		// Get the node's current transforms for debugging
 		glm::vec3 oldTranslation = node->translation;
-		glm::quat oldRotation = node->rotation;
 		glm::vec3 oldScale = node->scale;
 
 		// Apply the animation transforms

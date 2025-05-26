@@ -23,7 +23,7 @@ ModelRegistry& ModelRegistry::getInstance()
 ModelRegistry::ModelRegistry() : gltfLoader_(std::make_unique<GltfLoader>()) {}
 
 // Load a model with optional position parameters
-std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::string const& name, glm::vec3 position, glm::vec3 rotation, float scale)
+std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::string const& name)
 {
 	// Use provided name or generate one from path
 	// Since most of the model are called scene.gltf, so we used the folder name that contained the model as the default name.
@@ -33,10 +33,8 @@ std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::st
 	// Check if model is already loaded
 	// Append (1), (2), ... until an unused name is found
 	int suffix = 1;
-
-	int index = 1;
 	std::string baseName = modelName;
-	while (sceneRef.findEntity(modelName)) {
+	while (sceneRef.findGameObject(modelName)) {
 		modelName = baseName + '(' + std::to_string(suffix++) + ')';
 	}
 
@@ -68,21 +66,21 @@ std::shared_ptr<Model> ModelRegistry::loadModel(std::string const& path, std::st
 }
 
 // Add a model to a scene with a transform matrix
-void ModelRegistry::addModelToScene(Scene& scene, std::shared_ptr<Model> model)
+std::shared_ptr<GameObject> ModelRegistry::addModelToScene(Scene& scene, std::shared_ptr<Model> model)
 {
 	if (!model) {
 		std::cout << "[ModelRegistry ERROR] Invalid Model Pointer" << std::endl;
-		return;
+		return nullptr;
 	}
 
-	// Add to scene
-	scene.addEntity(model);
-
 	std::cout << "[ModelRegistry] Added model '" << model->modelName << "' to scene" << std::endl;
+
+	// Add to scene
+	return scene.addGameObject(model);
 }
 
 // Remove a model from a scene
-void ModelRegistry::removeModelFromScene(Scene& scene, std::string const& name) { scene.removeEntity(name); }
+void ModelRegistry::removeModelFromScene(Scene& scene, std::string const& name) { scene.removeGameObject(name); }
 
 // Private method to detect format from file extension
 ModelFormat ModelRegistry::detectFormat_(std::string const& path)

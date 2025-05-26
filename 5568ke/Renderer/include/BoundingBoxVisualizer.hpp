@@ -11,7 +11,7 @@
 class Shader;
 class Scene;
 class Model;
-class Entity;
+class GameObject;
 
 class BoundingBoxVisualizer {
 public:

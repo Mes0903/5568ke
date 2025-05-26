@@ -91,7 +91,7 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 	// Map each mesh to its node
 	for (size_t i = 0; i < gltfModel.nodes.size(); i++) {
 		auto const& node = gltfModel.nodes[i];
-		if (node.mesh >= 0 && node.mesh < model->meshNodeIndices.size()) {
+		if (node.mesh >= 0 && static_cast<std::size_t>(node.mesh) < model->meshNodeIndices.size()) {
 			model->meshNodeIndices[node.mesh] = i;
 			std::cout << "[GltfLoader] Node " << i << " references mesh " << node.mesh << std::endl;
 		}
@@ -133,14 +133,14 @@ std::shared_ptr<Model> GltfLoader::loadGltf_(std::string const& path, MaterialTy
 
 Texture* GltfLoader::loadTexture_(tinygltf::Model const& model, int textureIndex, TextureType type)
 {
-	if (textureIndex < 0 || textureIndex >= model.textures.size())
+	if (textureIndex < 0 || static_cast<std::size_t>(textureIndex) >= model.textures.size())
 		return nullptr;
 
 	auto* texture = new Texture();
 	texture->type = type;
 
 	tinygltf::Texture const& gltfTexture = model.textures[textureIndex];
-	if (gltfTexture.source < 0 || gltfTexture.source >= model.images.size()) {
+	if (gltfTexture.source < 0 || static_cast<std::size_t>(gltfTexture.source) >= model.images.size()) {
 		delete texture;
 		return nullptr;
 	}
@@ -200,7 +200,7 @@ Material* GltfLoader::createMaterial_(tinygltf::Model const& model, tinygltf::Pr
 		BlinnPhongMaterial* material = new BlinnPhongMaterial();
 
 		// Check if material exists in the model
-		if (primitive.material >= 0 && primitive.material < model.materials.size()) {
+		if (primitive.material >= 0 && static_cast<std::size_t>(primitive.material) < model.materials.size()) {
 			tinygltf::Material const& mat = model.materials[primitive.material];
 
 			// Set base color if available
@@ -447,13 +447,13 @@ void GltfLoader::loadAnimations_(std::shared_ptr<Model> model, tinygltf::Model c
 								<< ", target_path: " << channel.target_path << ", sampler: " << channel.sampler << std::endl;
 
 			// Skip channels targeting nodes we don't have
-			if (channel.target_node < 0 || channel.target_node >= model->nodes.size()) {
+			if (channel.target_node < 0 || static_cast<std::size_t>(channel.target_node) >= model->nodes.size()) {
 				std::cout << "[GltfLoader ERROR] Invalid target_node index: " << channel.target_node << std::endl;
 				continue;
 			}
 
 			// Skip invalid samplers
-			if (channel.sampler < 0 || channel.sampler >= anim.samplers.size()) {
+			if (channel.sampler < 0 || static_cast<std::size_t>(channel.sampler) >= anim.samplers.size()) {
 				std::cout << "[GltfLoader ERROR] Invalid sampler index: " << channel.sampler << std::endl;
 				continue;
 			}
@@ -498,7 +498,7 @@ void GltfLoader::loadNodeHierarchy_(std::shared_ptr<Model> model, tinygltf::Mode
 	std::cout << "[GltfLoader INFO] Model has " << gltfModel.nodes.size() << " nodes, root node is " << rootNodeIndex << std::endl;
 
 	// Validate root node index
-	if (rootNodeIndex < 0 || rootNodeIndex >= gltfModel.nodes.size()) {
+	if (rootNodeIndex < 0 || static_cast<std::size_t>(rootNodeIndex) >= gltfModel.nodes.size()) {
 		std::cout << "[GltfLoader ERROR] Invalid root node index: " << rootNodeIndex << std::endl;
 		return;
 	}
@@ -532,7 +532,7 @@ void GltfLoader::processNodeTreeRecursive_(std::shared_ptr<Model> model, tinyglt
 	std::cout << "[GltfLoader INFO] Processing node " << nodeIndex << std::endl;
 
 	// Validate node index
-	if (nodeIndex < 0 || nodeIndex >= gltfModel.nodes.size()) {
+	if (nodeIndex < 0 || static_cast<std::size_t>(nodeIndex) >= gltfModel.nodes.size()) {
 		std::cout << "[GltfLoader ERROR] Invalid node index: " << nodeIndex << std::endl;
 		return;
 	}
@@ -627,13 +627,13 @@ void GltfLoader::processNodeTreeRecursive_(std::shared_ptr<Model> model, tinyglt
 			int childIndex = node.children[i];
 
 			// Skip child nodes that are skins to avoid confusion in the hierarchy
-			if (childIndex >= 0 && childIndex < gltfModel.nodes.size() && gltfModel.nodes[childIndex].skin != -1) {
+			if (childIndex >= 0 && static_cast<std::size_t>(childIndex) < gltfModel.nodes.size() && gltfModel.nodes[childIndex].skin != -1) {
 				std::cout << "[GltfLoader INFO] Skipping skin child node " << childIndex << std::endl;
 				continue;
 			}
 
 			// Validate child index
-			if (childIndex < 0 || childIndex >= gltfModel.nodes.size()) {
+			if (childIndex < 0 || static_cast<std::size_t>(childIndex) >= gltfModel.nodes.size()) {
 				std::cout << "[GltfLoader ERROR] Invalid child node index: " << childIndex << std::endl;
 				continue;
 			}

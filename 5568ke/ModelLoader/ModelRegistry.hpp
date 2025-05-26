@@ -28,11 +28,10 @@ public:
 	static ModelRegistry& getInstance();
 
 	// Load a model with optional position parameters
-	std::shared_ptr<Model> loadModel(std::string const& path, std::string const& name = "", glm::vec3 position = glm::vec3(0.0f),
-																	 glm::vec3 rotation = glm::vec3(0.0f), float scale = 1.0f);
+	std::shared_ptr<Model> loadModel(std::string const& path, std::string const& name = "");
 
 	// Add a model to a scene with a transform matrix
-	void addModelToScene(Scene& scene, std::shared_ptr<Model> model);
+	std::shared_ptr<GameObject> addModelToScene(Scene& scene, std::shared_ptr<Model> model);
 
 	// Remove a model from a scene
 	void removeModelFromScene(Scene& scene, std::string const& name);

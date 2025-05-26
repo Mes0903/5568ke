@@ -40,7 +40,7 @@ BoundingBox getSkinnedMeshBBox(Mesh const& mesh, Model const& model)
 			int id = v.boneIds[i];
 
 			// do the linear blend skinning
-			if (w > 0.0f && id >= 0 && id < model.jointMatrices.size()) {
+			if (w > 0.0f && id >= 0 && static_cast<std::size_t>(id) < model.jointMatrices.size()) {
 				skinned += w * model.jointMatrices[id] * pos;
 				total += w;
 			}
@@ -64,7 +64,7 @@ BoundingBox getStaticMeshBox(Model const& model, size_t meshIndex)
 
 	if (meshIndex < model.meshNodeIndices.size()) {
 		int nodeIdx = model.meshNodeIndices[meshIndex];
-		if (nodeIdx >= 0 && nodeIdx < model.nodes.size() && model.nodes[nodeIdx])
+		if (nodeIdx >= 0 && static_cast<std::size_t>(nodeIdx) < model.nodes.size() && model.nodes[nodeIdx])
 			nodeM = model.nodes[nodeIdx]->getNodeMatrix();
 	}
 
@@ -121,4 +121,13 @@ void updateLocalBBox(Model& model)
 
 	model.localSpaceBBox = global;
 }
+
+// Fast overlap test (inclusive)
+bool isIntersectBBox(BoundingBox const& a, BoundingBox const& b)
+{
+	return (a.min.x <= b.max.x && a.max.x >= b.min.x) && (a.min.y <= b.max.y && a.max.y >= b.min.y) && (a.min.z <= b.max.z && a.max.z >= b.min.z);
+}
+
+// Combine two boxes (useful for hierarchy/BVH later)
+BoundingBox mergeBBox(BoundingBox const& a, BoundingBox const& b) { return {glm::min(a.min, b.min), glm::max(a.max, b.max)}; }
 } // namespace BBoxUtil

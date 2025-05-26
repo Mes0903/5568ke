@@ -13,4 +13,6 @@ struct BoundingBox {
 namespace BBoxUtil {
 BoundingBox getMeshBBox(Mesh const& mesh);
 void updateLocalBBox(Model& m);
+bool isIntersectBBox(BoundingBox const& a, BoundingBox const& b);
+BoundingBox mergeBBox(BoundingBox const& a, BoundingBox const& b);
 } // namespace BBoxUtil

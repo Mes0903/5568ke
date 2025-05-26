@@ -12,7 +12,7 @@ public:
 
 	// Animation state
 	bool isAnimating{};
-	std::string entityName;
+	std::string gameObjectName;
 	int clipIndex{};
 	float currentTime{};
 	float camSpeed{3.0f};

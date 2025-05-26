@@ -16,7 +16,7 @@ void AnimationChannel::loadChannelData(tinygltf::Model const& model, tinygltf::A
 	std::cout << "[AnimationChannel INFO] Target node: " << targetNode << std::endl;
 
 	// Validate sampler index
-	if (channel.sampler < 0 || channel.sampler >= anim.samplers.size()) {
+	if (channel.sampler < 0 || static_cast<std::size_t>(channel.sampler) >= anim.samplers.size()) {
 		std::cout << "[AnimationChannel ERROR] Invalid sampler index: " << channel.sampler << std::endl;
 		throw std::runtime_error("Invalid sampler index");
 	}
@@ -25,7 +25,7 @@ void AnimationChannel::loadChannelData(tinygltf::Model const& model, tinygltf::A
 	tinygltf::AnimationSampler const& sampler = anim.samplers.at(channel.sampler);
 
 	// Validate input accessor
-	if (sampler.input < 0 || sampler.input >= model.accessors.size()) {
+	if (sampler.input < 0 || static_cast<std::size_t>(sampler.input) >= model.accessors.size()) {
 		std::cout << "[AnimationChannel ERROR] Invalid input accessor index: " << sampler.input << std::endl;
 		throw std::runtime_error("Invalid input accessor index");
 	}
@@ -34,7 +34,7 @@ void AnimationChannel::loadChannelData(tinygltf::Model const& model, tinygltf::A
 	tinygltf::Accessor const& inputAccessor = model.accessors.at(sampler.input);
 
 	// Validate buffer view
-	if (inputAccessor.bufferView < 0 || inputAccessor.bufferView >= model.bufferViews.size()) {
+	if (inputAccessor.bufferView < 0 || static_cast<std::size_t>(inputAccessor.bufferView) >= model.bufferViews.size()) {
 		std::cout << "[AnimationChannel ERROR] Invalid input bufferView index: " << inputAccessor.bufferView << std::endl;
 		throw std::runtime_error("Invalid input bufferView index");
 	}
@@ -43,7 +43,7 @@ void AnimationChannel::loadChannelData(tinygltf::Model const& model, tinygltf::A
 	tinygltf::BufferView const& inputBufferView = model.bufferViews.at(inputAccessor.bufferView);
 
 	// Validate buffer
-	if (inputBufferView.buffer < 0 || inputBufferView.buffer >= model.buffers.size()) {
+	if (inputBufferView.buffer < 0 || static_cast<std::size_t>(inputBufferView.buffer) >= model.buffers.size()) {
 		std::cout << "[AnimationChannel ERROR] Invalid input buffer index: " << inputBufferView.buffer << std::endl;
 		throw std::runtime_error("Invalid input buffer index");
 	}
@@ -115,7 +115,7 @@ void AnimationChannel::loadChannelData(tinygltf::Model const& model, tinygltf::A
 	}
 
 	// Validate output accessor
-	if (sampler.output < 0 || sampler.output >= model.accessors.size()) {
+	if (sampler.output < 0 || static_cast<std::size_t>(sampler.output) >= model.accessors.size()) {
 		std::cout << "[AnimationChannel ERROR] Invalid output accessor index: " << sampler.output << std::endl;
 		throw std::runtime_error("Invalid output accessor index");
 	}
@@ -125,7 +125,7 @@ void AnimationChannel::loadChannelData(tinygltf::Model const& model, tinygltf::A
 	tinygltf::Accessor const& outputAccessor = model.accessors.at(sampler.output);
 
 	// Validate output buffer view
-	if (outputAccessor.bufferView < 0 || outputAccessor.bufferView >= model.bufferViews.size()) {
+	if (outputAccessor.bufferView < 0 || static_cast<std::size_t>(outputAccessor.bufferView) >= model.bufferViews.size()) {
 		std::cout << "[AnimationChannel ERROR] Invalid output bufferView index: " << outputAccessor.bufferView << std::endl;
 		throw std::runtime_error("Invalid output bufferView index");
 	}
@@ -134,7 +134,7 @@ void AnimationChannel::loadChannelData(tinygltf::Model const& model, tinygltf::A
 	tinygltf::BufferView const& outputBufferView = model.bufferViews.at(outputAccessor.bufferView);
 
 	// Validate output buffer
-	if (outputBufferView.buffer < 0 || outputBufferView.buffer >= model.buffers.size()) {
+	if (outputBufferView.buffer < 0 || static_cast<std::size_t>(outputBufferView.buffer) >= model.buffers.size()) {
 		std::cout << "[AnimationChannel ERROR] Invalid output buffer index: " << outputBufferView.buffer << std::endl;
 		throw std::runtime_error("Invalid output buffer index");
 	}

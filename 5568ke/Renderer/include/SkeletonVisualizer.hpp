@@ -10,7 +10,7 @@ class Shader;
 class Node;
 class Model;
 class Camera;
-class Entity;
+class GameObject;
 
 /**
  * @brief Helper class for visualizing skeletal animations
@@ -24,7 +24,7 @@ public:
 
 	bool hasSkeletonData(std::shared_ptr<Model> model) const;
 	void generateSkeletonData(std::shared_ptr<Model> model);
-	void draw(Entity const& entity, Camera const& cam); // Draw simple debug lines with axes, grid, etc.
+	void draw(GameObject const& gameObject, Camera const& cam); // Draw simple debug lines with axes, grid, etc.
 
 	std::shared_ptr<Shader> skeletonShader;
 

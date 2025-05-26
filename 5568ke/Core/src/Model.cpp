@@ -42,7 +42,7 @@ void Model::draw(Shader const& shader, glm::mat4 const& modelMatrix) const
 		// If this is a static mesh and has a node associated with it
 		if (i < meshNodeIndices.size()) {
 			int nodeIndex = meshNodeIndices[i];
-			if (nodeIndex >= 0 && nodeIndex < nodes.size() && nodes[nodeIndex]) {
+			if (nodeIndex >= 0 && static_cast<std::size_t>(nodeIndex) < nodes.size() && nodes[nodeIndex]) {
 				// Apply node's transform to the model matrix
 				finalTransform = modelMatrix * nodes[nodeIndex]->getNodeMatrix();
 				shader.sendMat4("model", finalTransform);
@@ -57,10 +57,6 @@ void Model::draw(Shader const& shader, glm::mat4 const& modelMatrix) const
 void Model::cleanup()
 {
 	// Clean up any dynamically allocated resources
-	for (auto& mesh : meshes) {
-		// Could add a cleanup method to Mesh class
-		// mesh.cleanup();
-	}
 	meshes.clear();
 	boundingBoxes.clear();
 }

@@ -108,7 +108,7 @@ Scene& Scene::getInstance()
 // Scene methods implementation for camera setup
 void Scene::setupCameraToViewScene(float padding)
 {
-	if (ents.empty()) {
+	if (gameObjects.empty()) {
 		cam.pos = glm::vec3(0.0f, 1.6f, 3.0f);
 		return;
 	}
@@ -118,11 +118,12 @@ void Scene::setupCameraToViewScene(float padding)
 	worldBounds.min = glm::vec3(std::numeric_limits<float>::max());
 	worldBounds.max = glm::vec3(std::numeric_limits<float>::lowest());
 
-	for (Entity const& entity : ents) {
-		if (!entity.visible || !entity.model)
+	for (auto const& goPtr : gameObjects) {
+		if (!goPtr || !goPtr->visible || !goPtr->getModel())
 			continue;
 
-		BoundingBox local = entity.model->localSpaceBBox;
+		GameObject& gameObject = *goPtr;
+		BoundingBox local = gameObject.getModel()->localSpaceBBox;
 
 		// 8 corner
 		glm::vec3 corners[8] = {
@@ -131,7 +132,7 @@ void Scene::setupCameraToViewScene(float padding)
 				{local.min.x, local.max.y, local.max.z}, {local.max.x, local.max.y, local.max.z},
 		};
 
-		glm::mat4 toWorldMatrix = entity.transform; // Model matrix of MVP transformation
+		glm::mat4 toWorldMatrix = gameObject.getTransform(); // Model matrix of MVP transformation
 
 		for (glm::vec3 c : corners) {
 			glm::vec3 wp = glm::vec3(toWorldMatrix * glm::vec4(c, 1.0f));
@@ -154,22 +155,21 @@ void Scene::setupCameraToViewScene(float padding)
 	cam.lookAt(cameraPos, worldCenter);
 }
 
-void Scene::setupCameraToViewEntity(std::string const& entityName, float padding)
+void Scene::setupCameraToViewGameObject(std::string const& gameObjectName, float padding)
 {
-	auto entOpt = findEntity(entityName);
-	if (!entOpt || !entOpt->get().model) {
+	auto goPtr = findGameObject(gameObjectName);
+	if (!goPtr || !goPtr->getModel()) {
 		setupCameraToViewScene();
 		return;
 	}
 
-	Entity const& entity = entOpt->get();
-
+	GameObject& gameObject = *goPtr;
 	BoundingBox worldBounds;
 	worldBounds.min = glm::vec3(std::numeric_limits<float>::max());
 	worldBounds.max = glm::vec3(std::numeric_limits<float>::lowest());
 
-	BoundingBox local = entity.model->localSpaceBBox;
-	glm::mat4 toWorldMatrix = entity.transform; // Model matrix of MVP transformation
+	BoundingBox local = gameObject.getModel()->localSpaceBBox;
+	glm::mat4 toWorldMatrix = gameObject.getTransform(); // Model matrix of MVP transformation
 
 	glm::vec3 corners[8] = {
 			{local.min.x, local.min.y, local.min.z}, {local.max.x, local.min.y, local.min.z}, {local.min.x, local.max.y, local.min.z},
@@ -197,34 +197,42 @@ void Scene::setupCameraToViewEntity(std::string const& entityName, float padding
 	cam.lookAt(cameraPos, worldCenter);
 }
 
-// Implementation for finding entity by name
-std::optional<std::reference_wrapper<Entity>> Scene::findEntity(std::string const& name)
+// Implementation for finding gameObject by name
+std::shared_ptr<GameObject> Scene::findGameObject(std::string const& name) const
 {
-	auto it = std::ranges::find_if(ents, [&](Entity const& e) { return e.model && e.model->modelName == name; });
-	if (it == ents.end())
-		return std::nullopt;
+	auto it = std::ranges::find_if(gameObjects, [&](std::shared_ptr<GameObject> const& obj) {
+		// only match if model exists and names equal
+		return obj->getModel() && obj->getModel()->modelName == name;
+	});
 
-	return *it; // implicit conversion to std::reference_wrapper
+	if (it != gameObjects.end())
+		return *it; // shared_ptr<GameObject>
+
+	return nullptr; // not found
 }
 
-// Implementation for adding entity with tracking by name
-void Scene::addEntity(std::shared_ptr<Model> model)
+// Implementation for adding gameObject with tracking by name
+std::shared_ptr<GameObject> Scene::addGameObject(std::shared_ptr<Model> model)
 {
 	if (!model)
-		return;
+		return nullptr;
 
-	// Create a new entity
-	Entity entity;
-	entity.model = model;
+	// create a shared_ptr<GameObject> directly
+	auto gameObject = std::make_shared<GameObject>(model);
 
-	// Add to entities vector
-	ents.push_back(entity);
+	// register into the scene
+	gameObjects.push_back(gameObject);
+
+	// return it so caller can further configure (e.g. set position, callbacks...)
+	return gameObject;
 }
 
-// Implementation for removing entity
-void Scene::removeEntity(std::string const& name)
+// Implementation for removing gameObject
+void Scene::removeGameObject(std::string const& name)
 {
-	std::erase_if(ents, [&](Entity const& e) { return e.model && e.model->modelName == name; });
+	gameObjects.erase(std::remove_if(gameObjects.begin(), gameObjects.end(),
+																	 [&](auto const& goPtr) { return goPtr && goPtr->getModel() && goPtr->getModel()->modelName == name; }),
+										gameObjects.end());
 }
 
 // Implementation for adding light
@@ -235,6 +243,11 @@ void Scene::addLight(glm::vec3 const& position, glm::vec3 const& color, float in
 	light.color = color;
 	light.intensity = intensity;
 	lights.push_back(std::move(light));
+}
+
+size_t Scene::getVisibleGameObjectCount() const
+{
+	return std::count_if(gameObjects.begin(), gameObjects.end(), [](auto const& goPtr) { return goPtr && goPtr->visible; });
 }
 
 // Scene cleanup
